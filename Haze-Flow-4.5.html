@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Haze-Flow 4.5: AI 去支配化身心行事曆</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.3); opacity: 0.95; }
+        }
+      .breathe-circle { animation: breathe 4s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-gradient-to-tr from-[#f0f4ff] via-[#f5f3ff] to-[#fff1f2] min-h-screen flex flex-col items-center justify-center p-4 overflow-x-hidden select-none relative">
+
+    <div class="text-center mb-4 max-w-md">
+        <h1 class="text-2xl font-semibold text-indigo-950 font-medium">Haze-Flow 身心行事曆</h1>
+        <p class="text-xs text-indigo-800/60 mt-1">專為排解拖延與學術焦慮設計</p>
+    </div>
+
+    <div class="relative w-full max-w-[375px] h-[720px] bg-white/70 backdrop-blur-xl rounded-[48px] shadow-2xl border-4 border-slate-900/5 overflow-hidden flex flex-col justify-between">
+        
+        <div class="w-full h-8 px-8 pt-3 flex justify-between items-center text-xs text-slate-500 font-medium z-10 shrink-0">
+            <span id="status-bar-clock">09:41</span>
+            <div class="flex items-center gap-1.5">
+                <i data-lucide="signal" class="w-3 h-3"></i>
+                <i data-lucide="wifi" class="w-3 h-3"></i>
+                <i data-lucide="battery" class="w-4 h-4"></i>
+            </div>
+        </div>
+
+        <div id="app-content" class="flex-1 overflow-hidden relative flex flex-col justify-between">
+            
+            <div id="screen-welcome" class="flex flex-col justify-between px-6 py-8 h-full overflow-y-auto text-center">
+                <div class="flex flex-col items-center gap-6 my-auto">
+                    <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 shadow-inner">
+                        <i id="welcome-time-icon" data-lucide="cloud-sun" class="w-10 h-10 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <p id="welcome-time-greeting" class="text-xs font-semibold text-indigo-500 bg-indigo-50 inline-block px-2.5 py-1 rounded-full mb-2">早上好</p>
+                        <h2 class="text-xl font-bold text-indigo-950">歡迎使用 Haze-Flow</h2>
+                        <p id="welcome-time-desc" class="text-xs text-indigo-600 font-medium tracking-wide mt-1">不逼你做到完美的身心行事曆</p>
+                    </div>
+                    <div class="bg-white/50 border border-indigo-100/50 p-4 rounded-3xl text-left max-w-xs shadow-sm">
+                        <p class="text-xs text-slate-500 leading-relaxed">
+                            💡 <b>我們的核心理念：</b><br>
+                            覺得被滿滿的死線和待辦事項壓得喘不過氣嗎？這裡不逼你追求完美。我們會根據你每天的心情與體力，自動幫你精簡行程，陪你一步步找回生活節奏。
+                        </p>
+                        <div class="mt-3 flex items-center gap-1.5 text-[10px] text-indigo-500 font-semibold">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 🛡️ 系統已開啟「學業死線安全防護網」
+                        </div>
+                    </div>
+                </div>
+                <button id="welcome-start-btn" onclick="startOnboarding()" class="w-full bg-indigo-950 text-white text-xs font-semibold py-3.5 rounded-2xl shadow-lg shadow-indigo-950/10 hover:bg-indigo-900 transition-all active:scale-[0.98]">
+                    開始今天的第一步 ➡️
+                </button>
+            </div>
+
+            <div id="screen-login" class="hidden flex flex-col justify-between px-6 py-4 h-full overflow-y-auto">
+                <div class="flex flex-col gap-4">
+                    <div class="mt-2 text-center">
+                        <span id="login-time-badge" class="text-xs font-semibold tracking-widest text-indigo-500 bg-indigo-50 px-2.5 py-1 rounded-full uppercase">早上好！先記錄一下你目前的狀態</span>
+                        <h2 id="login-prompt-title" class="text-xl font-semibold text-indigo-950 mt-2">你今天感覺如何？</h2>
+                        <p id="login-prompt-desc" class="text-[10px] text-slate-400 mt-1 leading-relaxed">你的心情和體力，會自動決定今天最適合的工作總時數</p>
+                    </div>
+
+                    <div class="bg-white/40 border border-indigo-50/50 p-4 rounded-3xl mt-2">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs text-slate-500 font-semibold flex items-center gap-1">
+                                <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-400"></i> 你現在的體力/精神剩多少？
+                            </span>
+                            <span id="energy-val" class="text-sm font-semibold text-indigo-600">50%</span>
+                        </div>
+                        <input type="range" id="energy-slider" min="0" max="100" value="50" class="w-full accent-indigo-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <span class="text-xs text-slate-500 font-semibold ml-1">心理天氣/情緒登錄</span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div data-weather="happy" onclick="selectWeather('happy', this)" class="weather-card bg-indigo-50 border-2 border-indigo-500 p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.03] active:scale-95">
+                                <i data-lucide="sun" class="w-5 h-5 text-amber-500"></i>
+                                <span class="text-xs font-semibold text-slate-700">陽光很開心 ☀️</span>
+                                <span class="text-[8px] text-slate-400 text-center">心情晴朗、元氣滿滿</span>
+                            </div>
+                            <div data-weather="breeze" onclick="selectWeather('breeze', this)" class="weather-card bg-white/40 border-2 border-transparent p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.03] active:scale-95">
+                                <i data-lucide="wind" class="w-5 h-5 text-emerald-400"></i>
+                                <span class="text-xs font-semibold text-slate-700">微風平靜溫和 🍃</span>
+                                <span class="text-[8px] text-slate-400 text-center">平靜溫和、步調穩定</span>
+                            </div>
+                            <div data-weather="fog" onclick="selectWeather('fog', this)" class="weather-card bg-white/40 border-2 border-transparent p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.03] active:scale-95">
+                                <i data-lucide="cloud-fog" class="w-5 h-5 text-indigo-400"></i>
+                                <span class="text-xs font-semibold text-slate-700">濃霧有些慌亂 🌫️</span>
+                                <span class="text-[8px] text-slate-400 text-center">思緒卡頓、分析癱瘓</span>
+                            </div>
+                            <div data-weather="storm" onclick="selectWeather('storm', this)" class="weather-card bg-white/40 border-2 border-transparent p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.03] active:scale-95">
+                                <i data-lucide="cloud-rain" class="w-5 h-5 text-rose-400"></i>
+                                <span class="text-xs font-semibold text-slate-700">暴雨嚴重過載 ⛈️</span>
+                                <span class="text-[8px] text-slate-400 text-center">壓力崩潰、強迫剪枝</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 mt-4 shrink-0">
+                    <button id="login-btn-calendar" onclick="handleMorningDecide('calendar')" class="w-full bg-indigo-950 text-white text-xs font-semibold py-3.5 rounded-2xl shadow-lg shadow-indigo-950/10 hover:bg-indigo-900 transition-all active:scale-[0.98]">
+                        查看整個月的日曆 📅
+                    </button>
+                    <button id="login-btn-schedule" onclick="handleMorningDecide('schedule')" class="w-full bg-emerald-600 text-white text-xs font-semibold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/10 hover:bg-emerald-700 transition-all active:scale-[0.98]">
+                        直接看今天的行程（今日推薦） 📋
+                    </button>
+                </div>
+            </div>
+
+            <div id="screen-calendar" class="hidden flex flex-col h-full overflow-hidden">
+                <div class="px-6 py-2 flex justify-between items-center bg-white/30 backdrop-blur-md border-b border-slate-100 shrink-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-sm font-semibold text-slate-800">2026 年 6 月</span>
+                        <div id="phase-badge-calendar"></div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="goToTodayTodoScreen()" class="text-slate-600 hover:text-indigo-600" title="今日行程表"><i data-lucide="clipboard-list" class="w-4 h-4"></i></button>
+                        <button onclick="toggleSearch()" class="text-slate-600 hover:text-indigo-600"><i data-lucide="search" class="w-4 h-4"></i></button>
+                        <button onclick="openAddEventScreen()" class="text-slate-800 hover:text-indigo-600 bg-white shadow-sm p-1.5 rounded-full"><i data-lucide="plus" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+
+                <div class="vitality-status-overview flex justify-between items-center mx-6 my-2 px-3 py-2.5 bg-white/40 rounded-2xl border border-white/60 shrink-0">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="vitality-overview-icon shrink-0"></span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-indigo-950">今日身心狀態</p>
+                            <p class="vitality-overview-desc text-[10px] text-slate-400 truncate">陽光 · 體力 50%</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openVitalityAdjustModal()" class="text-[10px] text-indigo-500 hover:underline font-semibold shrink-0 ml-2">調整</button>
+                </div>
+
+                <div id="search-bar" class="hidden px-6 py-2 bg-slate-50 border-b border-slate-100 shrink-0">
+                    <input type="text" id="search-input" oninput="filterEvents(this.value)" placeholder="搜尋行程標題..." class="w-full text-xs bg-white border border-slate-200 px-3 py-1.5 rounded-xl focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div class="px-6 py-3 bg-white/20 border-b border-slate-100 shrink-0">
+                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-400 mb-1">
+                        <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center" id="calendar-grid"></div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[11px] font-semibold text-slate-400 tracking-wider uppercase">今日月曆行程</span>
+                        <span id="pruned-status-badge" class="hidden text-[9px] font-bold bg-rose-50 text-rose-500 px-2 py-0.5 rounded-full">已啟動「自動減量保護」</span>
+                    </div>
+                    <div id="today-events-container" class="flex flex-col gap-2.5"></div>
+                </div>
+            </div>
+
+            <div id="screen-today-todo" class="hidden flex flex-col h-full overflow-hidden">
+                <div class="px-6 py-2.5 flex justify-between items-center bg-white/30 backdrop-blur-md border-b border-slate-100 shrink-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-sm font-semibold text-slate-800">今日身心行程</span>
+                        <div id="phase-badge-schedule"></div>
+                    </div>
+                    <button onclick="goToCalendarScreen()" class="text-indigo-600 hover:text-indigo-800 bg-white shadow-sm p-1.5 rounded-full" title="返回行事曆"><i data-lucide="calendar" class="w-4 h-4"></i></button>
+                </div>
+
+                <div class="vitality-status-overview flex justify-between items-center mx-6 my-2 px-3 py-2.5 bg-white/40 rounded-2xl border border-white/60 shrink-0">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="vitality-overview-icon shrink-0"></span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-indigo-950">今日身心狀態</p>
+                            <p class="vitality-overview-desc text-[10px] text-slate-400 truncate">陽光 · 體力 50%</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openVitalityAdjustModal()" class="text-[10px] text-indigo-500 hover:underline font-semibold shrink-0 ml-2">調整</button>
+                </div>
+
+                <div class="px-6 py-3 bg-indigo-50/30 border-b border-slate-100 shrink-0">
+                    <div class="flex justify-between items-center text-xs font-semibold text-indigo-950 mb-1">
+                        <span class="flex items-center gap-1"><i data-lucide="activity" class="w-3.5 h-3.5 text-indigo-500"></i> 今天建議的總工作時間</span>
+                        <span><span id="current-planned-hours">0</span> / <span id="max-allowed-hours">4.0</span> 小時</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div id="hours-progress-bar" class="bg-indigo-600 h-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                    <p id="budget-desc" class="text-[9px] text-slate-400 mt-1.5 leading-tight">🌱 為了不讓你太累，我們今天不排滿，慢慢做完就好。</p>
+
+                    <div id="unreported-status-banner" class="hidden mt-2.5 bg-amber-50/50 border border-amber-100 rounded-xl p-2">
+                        <span class="text-[9px] font-bold text-amber-800 flex items-center gap-0.5"><i data-lucide="shield-alert" class="w-3 h-3"></i>昨日任務未回報 · 今日時數已溫和限流</span>
+                        <span class="text-[8px] text-slate-400 mt-0.5 block">非安全網行程承載上限已精簡；學業安全網不受限流，計入上方顯示中的總工作時數。</span>
+                    </div>
+                    <div id="vitality-throttle-banner" class="hidden mt-2.5 bg-rose-50/50 border border-rose-100 rounded-xl p-2">
+                        <span id="vitality-throttle-banner-title" class="text-[9px] font-bold text-rose-800 flex items-center gap-0.5"><i data-lucide="heart-pulse" class="w-3 h-3"></i>身心狀態限流中</span>
+                        <span id="vitality-throttle-banner-desc" class="text-[8px] text-slate-400 mt-0.5 block"></span>
+                    </div>
+                    <div id="prep-warning-display-banner" class="hidden mt-2.5 bg-slate-100/80 border border-slate-200 rounded-xl p-2">
+                        <span class="text-[9px] font-bold text-slate-600 flex items-center gap-0.5"><i data-lucide="eye-off" class="w-3 h-3"></i>死線預警顯示已關閉</span>
+                        <span class="text-[8px] text-slate-400 mt-0.5 block">準備期內不會提早露出安全網行程；死線當日仍會正常顯示。</span>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+                    <div class="bg-white/40 border border-slate-100 p-3 rounded-2xl shrink-0 flex gap-2">
+                        <button type="button" id="p-add-btn" onclick="triggerQuickAdd()" class="flex-1 py-2 bg-indigo-950 hover:bg-indigo-900 text-white rounded-xl text-[10px] font-semibold transition-all flex items-center justify-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> 新增行程 ➕
+                        </button>
+                        <button type="button" id="p-clear-btn" onclick="clearTodaySchedule()" class="flex-1 py-2 bg-white hover:bg-rose-50 border border-slate-200 rounded-xl text-[10px] font-semibold text-slate-600 transition-all flex items-center justify-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i> 清空今天行程（今天想好好休息） 🧹
+                        </button>
+                    </div>
+
+                    <div id="p-focus-panel" class="bg-rose-50/30 border border-rose-100/30 p-3 rounded-2xl shrink-0 transition-all">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-semibold text-indigo-950 flex items-center gap-1">
+                                <i data-lucide="timer" class="w-3.5 h-3.5 text-rose-400"></i> 溫和專注節奏調控
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-[9px] text-slate-400 max-w-[190px]">連續閱讀專注超過 3 小時容易引發疲勞自責，建議採用溫和番茄鐘。</p>
+                            <button type="button" id="p-focus-btn" onclick="checkFocusCapability()" class="bg-rose-500 hover:bg-rose-600 text-white text-[10px] font-semibold px-2.5 py-1.5 rounded-xl transition-all shrink-0">
+                                3 小時專注
+                            </button>
+                        </div>
+                        <div id="pomo-player" class="hidden mt-3 bg-white/80 border border-rose-100 p-3 rounded-2xl flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="compass" class="w-4 h-4 text-rose-500 animate-spin"></i>
+                                <div>
+                                    <p class="text-[10px] font-semibold text-rose-950">隨行溫和番茄鐘啟動中</p>
+                                    <p id="pomo-time" class="text-xs font-bold text-rose-600">25:00</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-1.5">
+                                <button type="button" id="pomo-btn" onclick="togglePomo()" class="p-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg"><i id="pomo-icon" data-lucide="play" class="w-3.5 h-3.5"></i></button>
+                                <button type="button" onclick="stopPomo()" class="p-1 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg"><i data-lucide="square" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        <span class="text-xs text-slate-500 font-semibold ml-1 flex items-center gap-1">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i> 今日時間軸（AI 會自動幫你分析行程類型與重要性）
+                        </span>
+                        <div id="timeline-container" class="flex flex-col gap-3 relative pl-4 border-l-2 border-indigo-100"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="screen-add-event" class="hidden absolute inset-0 bg-white z-20 flex flex-col justify-between overflow-y-auto">
+                <div class="px-6 py-4 flex justify-between items-center border-b border-slate-100">
+                    <button onclick="closeAddEventScreen()" class="text-xs text-slate-500 hover:text-indigo-600 font-semibold">取消</button>
+                    <span class="text-sm font-semibold text-slate-800">新增行程（交給 AI 智慧分析）</span>
+                    <button onclick="saveNewEvent()" class="text-indigo-600 hover:text-indigo-800"><i data-lucide="check" class="w-5 h-5"></i></button>
+                </div>
+
+                <div class="flex-1 px-6 py-4 flex flex-col gap-4 overflow-y-auto">
+                    <div id="add-event-scaffold-notice" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-3 text-[10px] text-amber-900 leading-relaxed">
+                        <span class="font-bold flex items-center gap-1 mb-1"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 🌱 Day 1 腳手架防護中</span>
+                        你仍可<b>無限新增</b>任何行程。達今日承載上限後，系統會依當下行程狀態動態調整顯示優先順序。
+                    </div>
+                    <div class="flex flex-col gap-3">
+                        <input type="text" id="event-title" placeholder="行程標題 (如：去逛街、打掃、寫微積分作業)" class="w-full text-sm border-b border-slate-200 py-2 focus:outline-none focus:border-indigo-500 font-medium">
+                        <input type="text" id="event-location" placeholder="地點" class="w-full text-xs border-b border-slate-200 py-2 focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <div class="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span class="text-xs font-semibold text-slate-600">出門需要花多少交通時間？</span>
+                        <select id="event-travel-time" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-slate-700">
+                            <option value="none">無</option>
+                            <option value="5分鐘">5分鐘</option>
+                            <option value="10分鐘">10分鐘</option>
+                            <option value="15分鐘">15分鐘</option>
+                            <option value="30分鐘">30分鐘</option>
+                            <option value="1小時">1小時</option>
+                            <option value="1小時30分鐘">1小時30分鐘</option>
+                            <option value="2小時">2小時</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col gap-2.5 py-1 border-b border-slate-100">
+                        <div class="flex flex-col gap-0.5">
+                            <span id="main-time-label" class="text-xs font-semibold text-slate-600">時間需要多精準？</span>
+                            <span id="deadline-time-hint" class="hidden text-[10px] text-indigo-600 leading-relaxed">此設定用於<b>死線當日</b>的行程時間。</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="sr-only">時間模式</span>
+                            <div class="flex bg-slate-100 rounded-xl p-0.5">
+                                <button id="time-mode-specific" onclick="toggleTimeMode('specific')" class="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white text-indigo-950 shadow-sm transition-all">精準時間 (幾點幾分)</button>
+                                <button id="time-mode-fuzzy" onclick="toggleTimeMode('fuzzy')" class="text-[10px] font-semibold px-2.5 py-1 rounded-lg text-slate-500 transition-all">模糊時間 (上午/下午/整天)</button>
+                            </div>
+                        </div>
+
+                        <div id="time-config-specific" class="flex flex-col gap-2 mt-1">
+                            <div class="flex justify-between items-center text-[11px] text-slate-500">
+                                <span>開始</span>
+                                <input type="datetime-local" id="event-start-time" value="2026-06-06T10:00" class="border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none">
+                            </div>
+                            <div class="flex justify-between items-center text-[11px] text-slate-500">
+                                <span>結束</span>
+                                <input type="datetime-local" id="event-end-time" value="2026-06-06T12:00" class="border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none">
+                            </div>
+                        </div>
+
+                        <div id="time-config-fuzzy" class="hidden flex flex-col gap-2.5 mt-1">
+                            <div class="flex justify-around py-2 bg-indigo-50/50 rounded-2xl">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold">
+                                    <input type="radio" name="fuzzy-time" value="all-day" checked class="accent-indigo-600"> 整日
+                                </label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold">
+                                    <input type="radio" name="fuzzy-time" value="morning" class="accent-indigo-600"> 上午
+                                </label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold">
+                                    <input type="radio" name="fuzzy-time" value="afternoon" class="accent-indigo-600"> 下午
+                                </label>
+                            </div>
+                            <div class="flex justify-between items-center text-[11px] text-slate-500">
+                                <span>這項行程預計要做多久？</span>
+                                <select id="fuzzy-duration-hours" class="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 text-slate-700">
+                                    <option value="0.5">30 分鐘</option>
+                                    <option value="1.0" selected>1.0 小時</option>
+                                    <option value="1.5">1.5 小時</option>
+                                    <option value="2.0">2.0 小時</option>
+                                    <option value="3.0">3.0 小時</option>
+                                    <option value="4.0">4.0 小時</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="prep-warning-section" class="bg-indigo-50/50 border border-indigo-100 p-4 rounded-3xl flex flex-col gap-2">
+                        <div class="flex justify-between items-center gap-2">
+                            <span class="text-xs font-bold text-indigo-950 flex items-center gap-1 shrink-0"><i data-lucide="shield-check" class="w-4 h-4 text-indigo-500"></i> 🛡️ 重要死線預警（作業/考試）</span>
+                            <div class="grid grid-cols-2 gap-1 shrink-0">
+                                <button type="button" id="prep-warning-form-on" onclick="setPrepWarningFormEnabled(true)" class="px-2 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-semibold transition-all">開啟</button>
+                                <button type="button" id="prep-warning-form-off" onclick="setPrepWarningFormEnabled(false)" class="px-2 py-1 bg-white border border-indigo-200 text-indigo-700 rounded-lg text-[9px] font-semibold transition-all">關閉</button>
+                            </div>
+                        </div>
+                        <div id="prep-warning-form-body" class="flex flex-col gap-2">
+                        <p class="text-[10px] text-slate-500 leading-relaxed">
+                            輸入與學期、考試、作業、報告、死線有關的詞時，AI 會判定為「重要學術事件」。<b>上方時間為死線當日</b>，準備天數決定從死線前幾天起在行程表顯示「準備〇〇」。
+                        </p>
+                        <div class="flex justify-between items-center text-[11px] text-slate-500 mt-1">
+                            <span>需要提前多少天開始準備？ (最大 30 天)</span>
+                            <div class="flex items-center gap-1">
+                                <input type="number" id="event-prep-days" min="0" max="30" value="0" oninput="updatePrepDeadlineTimeUI()" class="w-12 text-center border border-slate-200 rounded-lg py-1 bg-white">
+                                <span>天</span>
+                            </div>
+                        </div>
+                        <div id="prep-time-config" class="hidden flex flex-col gap-2.5 mt-2 pt-2 border-t border-indigo-100">
+                            <span class="text-[10px] font-semibold text-indigo-950">準備期預警的時間安排（死線之前每日顯示，可與死線當日不同）</span>
+                            <div class="flex bg-slate-100 rounded-xl p-0.5">
+                                <button type="button" id="prep-time-mode-specific" onclick="togglePrepTimeMode('specific')" class="text-[10px] font-semibold px-2.5 py-1 rounded-lg text-slate-500 transition-all">精準時間</button>
+                                <button type="button" id="prep-time-mode-fuzzy" onclick="togglePrepTimeMode('fuzzy')" class="text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white text-indigo-950 shadow-sm transition-all">模糊時間</button>
+                            </div>
+                            <div id="prep-time-config-specific" class="hidden flex flex-col gap-2">
+                                <div class="flex justify-between items-center text-[11px] text-slate-500">
+                                    <span>開始</span>
+                                    <input type="time" id="prep-start-time" value="10:00" class="border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none">
+                                </div>
+                                <div class="flex justify-between items-center text-[11px] text-slate-500">
+                                    <span>結束</span>
+                                    <input type="time" id="prep-end-time" value="11:00" class="border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none">
+                                </div>
+                            </div>
+                            <div id="prep-time-config-fuzzy" class="flex flex-col gap-2.5">
+                                <div class="flex justify-around py-2 bg-indigo-50/50 rounded-2xl">
+                                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold">
+                                        <input type="radio" name="prep-fuzzy-time" value="all-day" class="accent-indigo-600"> 整日
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold">
+                                        <input type="radio" name="prep-fuzzy-time" value="morning" checked class="accent-indigo-600"> 上午
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold">
+                                        <input type="radio" name="prep-fuzzy-time" value="afternoon" class="accent-indigo-600"> 下午
+                                    </label>
+                                </div>
+                                <div class="flex justify-between items-center text-[11px] text-slate-500">
+                                    <span>預計時長</span>
+                                    <select id="prep-fuzzy-duration-hours" class="bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 text-slate-700">
+                                        <option value="0.5">30 分鐘</option>
+                                        <option value="1.0" selected>1.0 小時</option>
+                                        <option value="1.5">1.5 小時</option>
+                                        <option value="2.0">2.0 小時</option>
+                                        <option value="3.0">3.0 小時</option>
+                                        <option value="4.0">4.0 小時</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 py-2 border-b border-slate-100">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-semibold text-slate-600">重複</span>
+                            <select id="event-repeat" onchange="handleRepeatChange(this.value)" class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2 py-1.5 text-slate-700">
+                                <option value="never">永不</option>
+                                <option value="daily">每天</option>
+                                <option value="weekly">每週</option>
+                                <option value="biweekly">每兩週</option>
+                                <option value="monthly">每月</option>
+                                <option value="yearly">每年</option>
+                                <option value="custom">自訂...</option>
+                            </select>
+                        </div>
+                        <div id="custom-repeat-container" class="hidden bg-slate-50 p-3 rounded-2xl border border-slate-200/50 flex flex-col gap-2">
+                            <div class="flex justify-between items-center text-[11px] text-slate-500">
+                                <span>自訂頻率</span>
+                                <select id="custom-repeat-frequency" onchange="handleCustomFreqChange(this.value)" class="bg-white border border-slate-200 rounded-lg px-2 py-1 focus:outline-none">
+                                    <option value="never">永不</option>
+                                    <option value="daily">每天</option>
+                                    <option value="weekly">每週</option>
+                                    <option value="biweekly">每兩週</option>
+                                    <option value="monthly">每月</option>
+                                    <option value="yearly">每年</option>
+                                    <option value="days">自訂天數</option>
+                                </select>
+                            </div>
+                            <div id="custom-days-input-group" class="hidden flex justify-between items-center text-[11px] text-slate-500">
+                                <span>間隔天數</span>
+                                <div class="flex items-center gap-1">
+                                    <span>每</span>
+                                    <input type="number" id="custom-days-value" min="1" value="3" class="w-12 text-center border border-slate-200 rounded-lg py-0.5 bg-white">
+                                    <span>天</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-50/50 p-4 rounded-3xl border border-indigo-100">
+                        <h4 class="text-xs font-semibold text-indigo-950 flex items-center gap-1"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-500"></i> AI 主動代理說明</h4>
+                        <p class="text-[10px] text-slate-500 leading-relaxed mt-1">
+                            <b>學業安全網</b>（強制顯示）：考試／期末考／期中考／繳交／死線／討論／口試／答辯／投稿／論文審查／TA 批改／成績送交／截止／Meeting；或「期末／期中」且含「考」；或同時含「上」「課」、或含「選課」。<br>
+                            <b>分級一（非安全網）</b>：作業／報告／論文（未含繳交）、期末／期中（未含考）、簡報／實驗室打掃／報帳／採購／核銷／預約儀器／指導教授信件。<br>
+                            <b>分級二</b>：文獻／閱讀／寫作／程式撰寫／實驗分析／Meeting／分析／重構／論文草稿。<br>
+                            <b>分級三</b>：報帳／收據／回覆／信件／預約／器材／影印／填表／採購；或原休閒類但涉及<b>老師／教授／家長</b>等重要對象。<br>
+                            <b>分級四</b>：休閒充電類且<b>與他人一起</b>（聚餐、約會、聊天、同學等）。<br>
+                            <b>分級五</b>：休閒充電或家事類，<b>僅限自己</b>的獨處行程。
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div id="achievement-modal" class="hidden absolute inset-0 bg-indigo-950/40 backdrop-blur-md z-40 flex items-center justify-center px-6">
+            <div class="w-full bg-white rounded-[36px] p-6 text-center shadow-2xl border border-emerald-100 flex flex-col items-center gap-4 animate-bounce-short">
+                <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-500">
+                    <i data-lucide="trophy" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">🏆 恭喜！你成功養成自律節奏囉！</h3>
+                    <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                        哇！你已經連續三天順利完成任務囉！身心狀態非常棒。
+                    </p>
+                    <p class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                        系統已解開 Day 1 的保護限制！現在你可以自由新增、排序行程，並解鎖溫和番茄鐘等所有進階專注功能。
+                    </p>
+                </div>
+                <button onclick="dismissAchievement()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-medium transition-all">
+                    太棒了，進入自由安排模式 🚀
+                </button>
+            </div>
+        </div>
+
+        <div id="focus-modal" class="hidden absolute inset-0 bg-indigo-950/20 backdrop-blur-sm z-30 flex items-center justify-center px-4">
+            <div class="w-full bg-white rounded-[32px] p-6 flex flex-col gap-4">
+                <div class="flex items-center gap-2 text-rose-500">
+                    <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                    <h4 class="text-sm font-bold text-indigo-950">專注力與大腦保護分析</h4>
+                </div>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    ⚠️ 偵測到「3小時連續閱讀」排程。根據你過往的習慣數據分析，<b>單次連續專注超過 3 小時，極高機率引發拖延與大腦疲勞。</b>
+                </p>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    系統建議採用<b>「慢技術（Slow Technology）」</b>的共同調節法：改為執行「25分鐘順意番茄鐘」，搭配 5 分鐘呼吸，大腦會更感謝你。
+                </p>
+                <div class="flex gap-2.5 mt-2">
+                    <button type="button" onclick="switchToPomo()" class="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-xs font-medium transition-all text-center">
+                        切換為溫和番茄鐘
+                    </button>
+                    <button type="button" onclick="closeFocusModal()" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-medium transition-all text-center">
+                        堅持原樣
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="vitality-adjust-modal" class="hidden absolute inset-0 bg-indigo-950/25 backdrop-blur-sm z-40 flex items-end justify-center px-4 pb-6">
+            <div class="w-full bg-white rounded-[32px] p-5 flex flex-col gap-4 shadow-xl border border-slate-100 max-h-[88%] overflow-y-auto">
+                <div class="flex justify-between items-center">
+                    <h4 class="text-sm font-bold text-indigo-950">調整身心狀態</h4>
+                    <button type="button" onclick="closeVitalityAdjustModal()" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <p class="text-[10px] text-slate-500 leading-relaxed -mt-2">更新後系統會依你的體力與情緒，自動調整今日行程呈現與減負保護。</p>
+
+                <div class="bg-indigo-50/40 border border-indigo-100/60 p-4 rounded-3xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs text-slate-500 font-semibold flex items-center gap-1">
+                            <i data-lucide="zap" class="w-3.5 h-3.5 text-indigo-400"></i> 你現在的體力/精神剩多少？
+                        </span>
+                        <span id="adjust-energy-val" class="text-sm font-semibold text-indigo-600">50%</span>
+                    </div>
+                    <input type="range" id="adjust-energy-slider" min="0" max="100" value="50" class="w-full accent-indigo-500 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <span class="text-xs text-slate-500 font-semibold ml-1">心理天氣/情緒登錄</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div data-weather="happy" onclick="selectAdjustWeather('happy')" class="adjust-weather-card bg-white/60 border-2 border-transparent p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-95">
+                            <i data-lucide="sun" class="w-5 h-5 text-amber-500"></i>
+                            <span class="text-xs font-semibold text-slate-700">陽光很開心 ☀️</span>
+                        </div>
+                        <div data-weather="breeze" onclick="selectAdjustWeather('breeze')" class="adjust-weather-card bg-white/60 border-2 border-transparent p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-95">
+                            <i data-lucide="wind" class="w-5 h-5 text-emerald-400"></i>
+                            <span class="text-xs font-semibold text-slate-700">微風平靜溫和 🍃</span>
+                        </div>
+                        <div data-weather="fog" onclick="selectAdjustWeather('fog')" class="adjust-weather-card bg-white/60 border-2 border-transparent p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-95">
+                            <i data-lucide="cloud-fog" class="w-5 h-5 text-indigo-400"></i>
+                            <span class="text-xs font-semibold text-slate-700">濃霧有些慌亂 🌫️</span>
+                        </div>
+                        <div data-weather="storm" onclick="selectAdjustWeather('storm')" class="adjust-weather-card bg-white/60 border-2 border-transparent p-3 rounded-2xl flex flex-col items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] active:scale-95">
+                            <i data-lucide="cloud-rain" class="w-5 h-5 text-rose-400"></i>
+                            <span class="text-xs font-semibold text-slate-700">暴雨嚴重過載 ⛈️</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2.5 pt-1">
+                    <button type="button" onclick="closeVitalityAdjustModal()" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl text-xs font-semibold transition-all">取消</button>
+                    <button type="button" onclick="confirmVitalityAdjust()" class="flex-1 py-3 bg-indigo-950 hover:bg-indigo-900 text-white rounded-2xl text-xs font-semibold transition-all">確認更新</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="pruning-modal" data-target="calendar" class="hidden absolute inset-0 bg-indigo-950/20 backdrop-blur-sm z-30 flex items-center justify-center px-4">
+            <div class="w-full bg-white rounded-[32px] p-6 flex flex-col gap-4 shadow-xl border border-slate-100">
+                <div class="flex items-center gap-2 text-indigo-600">
+                    <i data-lucide="scissors" class="w-6 h-6 text-rose-500 animate-pulse"></i>
+                    <h4 class="text-sm font-bold text-indigo-950">🚨 系統自動減負保護已啟動！</h4>
+                </div>
+                <p id="pruning-modal-reason" class="text-xs text-slate-500 leading-relaxed"></p>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    因為你今天精神不太好，為了不讓你壓力太大，系統自動幫你隱藏了不重要的雜事，並把次要行程淡化 60%，今天請專注在最重要的事情就好！
+                </p>
+                <p class="text-xs text-slate-500 font-semibold leading-relaxed text-rose-500 flex items-center gap-1">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i> 🛡️ 生涯守護：涉及考試、交作業等重要行程不會被隱藏，確保不漏掉死線。
+                </p>
+                <div class="flex gap-2.5 mt-2">
+                    <button onclick="applyDynamicPruning()" class="flex-1 py-3 bg-indigo-950 hover:bg-indigo-900 text-white rounded-2xl text-xs font-medium transition-all text-center">
+                        謝謝系統，幫我精簡行程！
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-zen" class="hidden absolute inset-0 bg-white/60 backdrop-blur-xl z-30 flex flex-col items-center justify-center p-8 text-center transition-all duration-700">
+            <span class="text-xs font-semibold tracking-widest text-indigo-500 bg-indigo-50/80 px-3 py-1 rounded-full uppercase">放空深呼吸 🧘</span>
+            <div class="relative w-44 h-44 my-12 flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full bg-indigo-200/30 breathe-circle"></div>
+                <div class="absolute w-32 h-32 rounded-full bg-indigo-100/50 flex items-center justify-center">
+                    <span id="zen-countdown" class="text-2xl font-semibold text-indigo-950">吸氣...</span>
+                </div>
+            </div>
+            <h3 class="text-lg font-medium text-indigo-950">別急，你好像有點匆忙。</h3>
+            <p class="text-xs text-slate-500 max-w-[240px] mt-2 leading-relaxed">深吸一口氣，讓我們跟著圈圈深呼吸 3 次，找回平靜。</p>
+            <p id="zen-breaths-left" class="text-xs font-semibold text-indigo-600 mt-4 bg-indigo-50/50 px-3 py-1.5 rounded-full">第 1 / 3 次呼吸</p>
+        </div>
+
+        <div class="w-full h-6 flex items-center justify-center pb-2 z-10 shrink-0">
+            <div class="w-32 h-1 bg-slate-900/10 rounded-full"></div>
+        </div>
+
+    </div>
+
+    <div class="fixed bottom-4 right-4 bg-slate-950/90 text-white p-4 rounded-[28px] shadow-2xl z-50 flex flex-col gap-2.5 max-w-[280px] border border-slate-800 backdrop-blur-md">
+        <p class="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i> 💡 HCI 發表 Demo 專用控制台 (時空跳躍)
+        </p>
+        <div class="border-b border-slate-800 pb-2 flex flex-col gap-1.5">
+            <p class="text-[9px] text-slate-400">模擬開啟 App 時段：</p>
+            <p class="text-[8px] text-slate-500">切換現實時間問候與進入流程，並回到歡迎畫面。</p>
+            <div class="grid grid-cols-2 gap-1">
+                <button type="button" id="console-time-morning" onclick="simulateAppOpenAtTime('morning')" class="py-1.5 bg-sky-800 hover:bg-sky-700 rounded-lg text-[8px] font-semibold transition-all">🌅 早上</button>
+                <button type="button" id="console-time-noon" onclick="simulateAppOpenAtTime('noon')" class="py-1.5 bg-sky-800 hover:bg-sky-700 rounded-lg text-[8px] font-semibold transition-all">☀️ 中午</button>
+                <button type="button" id="console-time-afternoon" onclick="simulateAppOpenAtTime('afternoon')" class="py-1.5 bg-sky-800 hover:bg-sky-700 rounded-lg text-[8px] font-semibold transition-all">🌤️ 下午</button>
+                <button type="button" id="console-time-evening" onclick="simulateAppOpenAtTime('evening')" class="py-1.5 bg-sky-800 hover:bg-sky-700 rounded-lg text-[8px] font-semibold transition-all">🌙 晚上</button>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="switchDemoPhase('d1')" class="py-2.5 px-3 bg-amber-600 hover:bg-amber-700 rounded-xl text-[10px] font-semibold transition-all leading-tight text-center">
+                🌱 模擬 Day 1 (開放 1 行程)
+            </button>
+            <button onclick="switchDemoPhase('d3')" class="py-2.5 px-3 bg-amber-500 hover:bg-amber-600 rounded-xl text-[10px] font-semibold transition-all leading-tight text-center">
+                🌿 模擬 Day 3 (開放 2 行程)
+            </button>
+            <button onclick="switchDemoPhase('d5')" class="py-2.5 px-3 bg-amber-400 hover:bg-amber-500 rounded-xl text-[10px] font-semibold transition-all leading-tight text-center">
+                🌳 模擬 Day 5 (開放 3 行程)
+            </button>
+            <button onclick="switchDemoPhase('d7')" class="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-[10px] font-semibold transition-all leading-tight text-center">
+                🏆 模擬 Day 7 (自律解鎖階段)
+            </button>
+        </div>
+        <div class="border-t border-slate-800 pt-2 flex flex-col gap-1.5">
+            <p class="text-[9px] text-slate-400">昨日未完成任務模擬（時數限流）：</p>
+            <p class="text-[8px] text-slate-500">模擬「昨天沒回報完成任何任務」，今日可規劃時數將降級。</p>
+            <div class="grid grid-cols-2 gap-1">
+                <button type="button" id="console-unreported-on" onclick="setUnreportedThrottling(true)" class="py-1.5 bg-amber-700 hover:bg-amber-600 rounded-lg text-[8px] font-semibold transition-all">開啟限流</button>
+                <button type="button" id="console-unreported-off" onclick="setUnreportedThrottling(false)" class="py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-[8px] font-semibold transition-all">關閉限流</button>
+            </div>
+        </div>
+        <div class="border-t border-slate-800 pt-2 flex flex-col gap-1.5">
+            <p class="text-[9px] text-slate-400">一鍵測試「死線安全網」：</p>
+            <div class="grid grid-cols-2 gap-1">
+                <button type="button" onclick="injectPresetTask('微積分期末考 📐', '09:00', '12:00', '1', 'specific')" class="py-1 bg-indigo-900 hover:bg-indigo-800 rounded-lg text-[8px] font-semibold">微積分期末考</button>
+                <button type="button" onclick="injectPresetTask('繳交軟工報告 💻', '12:00', '13:00', '1', 'specific')" class="py-1 bg-indigo-900 hover:bg-indigo-800 rounded-lg text-[8px] font-semibold">繳交軟工報告</button>
+            </div>
+        </div>
+        <div class="border-t border-slate-800 pt-2 flex flex-col gap-1.5">
+            <p class="text-[9px] text-slate-400">死線預警顯示介面：</p>
+            <p class="text-[8px] text-slate-500">控制準備期內，是否在行程表／行事曆提早顯示安全網死線預警。</p>
+            <div class="grid grid-cols-2 gap-1">
+                <button type="button" id="console-prep-warning-on" onclick="setPrepWarningDisplay(true)" class="py-1.5 bg-indigo-700 hover:bg-indigo-600 rounded-lg text-[8px] font-semibold transition-all">開啟顯示</button>
+                <button type="button" id="console-prep-warning-off" onclick="setPrepWarningDisplay(false)" class="py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-[8px] font-semibold transition-all">關閉顯示</button>
+            </div>
+        </div>
+        <div class="border-t border-slate-800 pt-2 flex flex-col gap-1.5">
+            <p class="text-[9px] text-slate-400">一鍵測試「死線安全網預警」：</p>
+            <p class="text-[8px] text-slate-500">今天日期是 6/6。一鍵模擬新增 20 天後 (6/26) 的期末考。AI 會判定這需要提前 20 天準備，因此會立刻在今天的行程表中高亮發佈！</p>
+            <button type="button" onclick="injectPresetProtectedTask('微積分期末考 📐', 20, 20)" class="w-full py-1.5 bg-indigo-900 hover:bg-indigo-800 rounded-lg text-[8px] font-semibold flex items-center justify-center gap-1">
+                <i data-lucide="shield-check" class="w-3 h-3 text-indigo-400"></i> 注入：微積分期末考 (20天準備)
+            </button>
+        </div>
+        <button type="button" onclick="triggerZenZest()" class="w-full py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1">
+            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> 模擬學術焦慮 (深呼吸)
+        </button>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const AI_BADGE_DATA = {
+            high: { label: '深度專注 🧠', class: 'bg-indigo-50 text-indigo-700 border border-indigo-100' },
+            low: { label: '輕鬆機械 ⚙️', class: 'bg-emerald-50 text-emerald-700 border border-emerald-100' },
+            empty: { label: '徹底充電 🌸', class: 'bg-rose-50 text-rose-700 border border-rose-100' },
+        };
+        const AI_CALENDAR_TAGS = {
+            high: { name: '高腦力 🧠', class: 'bg-indigo-50 text-indigo-600' },
+            low: { name: '低腦力 ⚙️', class: 'bg-emerald-50 text-emerald-600' },
+            empty: { name: '純放空 🌸', class: 'bg-rose-50 text-rose-600' },
+        };
+        const WEATHER_LABELS = { happy: '陽光', breeze: '微風', fog: '濃霧', storm: '暴雨' };
+        const WEATHER_META = {
+            happy: { icon: 'sun', color: 'text-amber-500', mood: '心情晴朗、元氣滿滿' },
+            breeze: { icon: 'wind', color: 'text-emerald-500', mood: '平靜溫和' },
+            fog: { icon: 'cloud-fog', color: 'text-indigo-400', mood: '思緒卡頓、分析癱瘓' },
+            storm: { icon: 'cloud-rain', color: 'text-rose-400', mood: '壓力崩潰、強迫剪枝' },
+        };
+
+        function isZenBreathingWeather(weather) {
+            return weather === 'fog' || weather === 'storm';
+        }
+
+        function shouldAutoTriggerZenBreathing(weather, prevWeather) {
+            return isZenBreathingWeather(weather) && !isZenBreathingWeather(prevWeather);
+        }
+
+        const DATABASE_D1 = [
+            { id: 101, title: '聽 10 分鐘白噪音 🎧', location: '宿舍或窗邊', travelTime: 'none', timeType: 'fuzzy', fuzzy: 'morning', date: '2026-06-06', repeat: 'never', weight: '4', aiCategory: 'empty', isProtected: false, durationHours: 0.5, completed: false },
+            { id: 102, title: '午餐與同學聊天 🍱', location: '學校食堂', travelTime: 'none', timeType: 'fuzzy', fuzzy: 'afternoon', date: '2026-06-06', repeat: 'never', weight: '4', aiCategory: 'empty', isProtected: false, durationHours: 1.0, completed: false },
+            { id: 103, title: '整理書桌 🧹', location: '宿舍', travelTime: 'none', timeType: 'fuzzy', fuzzy: 'all-day', date: '2026-06-06', repeat: 'never', weight: '4', aiCategory: 'low', isProtected: false, durationHours: 0.5, completed: false }
+        ];
+
+        const SCAFFOLD_PHASE_CONFIG = {
+            d1: { microLimit: 1, maxHours: 3.0, throttleHours: 1.5, badgeClass: 'bg-amber-100 text-amber-800', icon: 'shield-check', label: '腳手架🌱D1' },
+            d3: { microLimit: 2, maxHours: 4.0, throttleHours: 2.0, badgeClass: 'bg-amber-50 text-amber-700', icon: 'shield-check', label: '腳手架🌿D3' },
+            d5: { microLimit: 3, maxHours: 6.0, throttleHours: 3.0, badgeClass: 'bg-lime-50 text-lime-800', icon: 'shield-check', label: '腳手架🌳D5' },
+        };
+
+        const DATABASE_D7 = [
+            { id: 1, title: '撰寫畢業論文 🎓', location: '圖書館三樓', travelTime: 'none', timeType: 'specific', date: '2026-06-06', start: '10:00', end: '12:00', weight: '1', repeat: 'never', aiCategory: 'high', isProtected: false, durationHours: 2.0, completed: false },
+            { id: 2, title: '回覆分組討論訊息 💬', location: '線上', travelTime: 'none', timeType: 'fuzzy', date: '2026-06-06', fuzzy: 'morning', weight: '3', repeat: 'never', aiCategory: 'high', isProtected: false, durationHours: 1.0, completed: false },
+            { id: 3, title: '預習微積分單元 📐', location: '自習室', travelTime: '15分鐘', timeType: 'fuzzy', date: '2026-06-06', fuzzy: 'afternoon', weight: '2', repeat: 'never', aiCategory: 'high', isProtected: false, durationHours: 1.5, completed: false },
+            { id: 4, title: '清理書桌與雜物 🧹', location: '宿舍', travelTime: 'none', timeType: 'fuzzy', date: '2026-06-06', fuzzy: 'all-day', weight: '4', repeat: 'never', aiCategory: 'low', isProtected: false, durationHours: 0.5, completed: false },
+            { id: 5, title: 'HCI 小組會議', location: '設計工作室', travelTime: '10分鐘', timeType: 'specific', date: '2026-06-06', start: '14:00', end: '15:30', weight: '2', repeat: 'never', aiCategory: 'high', isProtected: false, durationHours: 1.5, completed: false },
+            { id: 6, title: '午餐與同學聚餐 🍱', location: '學校食堂', travelTime: '10分鐘', timeType: 'specific', date: '2026-06-06', start: '12:00', end: '13:30', weight: '4', repeat: 'never', aiCategory: 'empty', isProtected: false, durationHours: 1.5, completed: false },
+            { id: 7, title: '信義區逛街 👗', location: '信義誠品', travelTime: '30分鐘', timeType: 'specific', date: '2026-06-06', start: '16:00', end: '18:00', weight: '4', repeat: 'never', aiCategory: 'empty', isProtected: false, durationHours: 2.0, completed: false }
+        ];
+
+        const TIME_OF_DAY_PRESETS = {
+            morning: {
+                label: '早上',
+                greeting: '早上好',
+                badge: '早上好！先記錄一下你目前的狀態',
+                prompt: '你今天感覺如何？',
+                desc: '你的心情和體力，會自動決定今天最適合的工作總時數',
+                welcomeDesc: '新的一天，從了解自己的狀態開始',
+                welcomeBtn: '開始今天的第一步 ➡️',
+                loginBtnCalendar: '查看整個月的日曆 📅',
+                loginBtnSchedule: '直接看今天的行程（今日推薦） 📋',
+                clock: '08:32',
+                icon: 'cloud-sun',
+                isFirstCheckIn: true,
+            },
+            noon: {
+                label: '中午',
+                greeting: '中午好',
+                badge: '中午好！抽空更新一下你的狀態',
+                prompt: '午間過得如何？',
+                desc: '依你現在的精力，系統會微調下午的行程節奏',
+                welcomeDesc: '午間回來了，讓我們同步一下你的狀態',
+                welcomeBtn: '更新午間狀態 ➡️',
+                loginBtnCalendar: '查看整個月的日曆 📅',
+                loginBtnSchedule: '繼續今天的行程 📋',
+                clock: '12:18',
+                icon: 'sun',
+                isFirstCheckIn: false,
+            },
+            afternoon: {
+                label: '下午',
+                greeting: '下午好',
+                badge: '下午好！來更新一下現在的狀態',
+                prompt: '下午還撐得住嗎？',
+                desc: '依你目前的體力，系統會幫你調整剩餘行程',
+                welcomeDesc: '下午時光，一起看看今天還能怎麼安排',
+                welcomeBtn: '繼續下午的行程 ➡️',
+                loginBtnCalendar: '查看整個月的日曆 📅',
+                loginBtnSchedule: '看今天剩餘推薦行程 📋',
+                clock: '15:47',
+                icon: 'cloud-sun',
+                isFirstCheckIn: false,
+            },
+            evening: {
+                label: '晚上',
+                greeting: '晚上好',
+                badge: '晚上好！忙了一天，記錄一下狀態',
+                prompt: '今天辛苦了，現在感覺如何？',
+                desc: '夜間模式：溫和收尾，避免再塞入高壓任務',
+                welcomeDesc: '夜深了，一起溫和地為今天收尾',
+                welcomeBtn: '查看今日收尾建議 ➡️',
+                loginBtnCalendar: '查看整個月的日曆 📅',
+                loginBtnSchedule: '查看今日收尾行程 📋',
+                clock: '20:15',
+                icon: 'moon',
+                isFirstCheckIn: false,
+            },
+        };
+
+        function getDefaultTimeOfDayFromRealClock() {
+            const h = new Date().getHours();
+            if (h >= 5 && h < 11) return 'morning';
+            if (h >= 11 && h < 14) return 'noon';
+            if (h >= 14 && h < 18) return 'afternoon';
+            return 'evening';
+        }
+
+        let eventsDatabase = [];
+        let simulatedTimeOfDay = getDefaultTimeOfDayFromRealClock();
+        let currentPhase = 'd1';
+        let selectedWeather = 'happy';
+        let currentEnergyLevel = 50;
+        let vitalityDraft = { weather: 'happy', energy: 50 };
+        let pendingMorningTarget = 'calendar';
+        let currentSelectedDate = '2026-06-06';
+        let isPruningActive = false;
+        let activeTimeMode = 'specific';
+        let prepTimeMode = 'fuzzy';
+        let prepWarningFormEnabled = false;
+        let prepWarningDisplayEnabled = true;
+        let unreportedThrottling = false;
+        let searchQuery = '';
+        let zenTimerIds = [];
+        let pomoInterval = null;
+        let pomoMinutes = 25;
+        let pomoSeconds = 0;
+        let isPomoRunning = false;
+
+        const slider = document.getElementById('energy-slider');
+        const valText = document.getElementById('energy-val');
+        slider.addEventListener('input', (e) => {
+            currentEnergyLevel = parseInt(e.target.value, 10);
+            updateAllEnergyUI();
+        });
+
+        function updateAllEnergyUI() {
+            const label = `${currentEnergyLevel}%`;
+            if (slider) slider.value = currentEnergyLevel;
+            if (valText) {
+                valText.innerText = label;
+                valText.className = 'text-sm font-semibold ' + (currentEnergyLevel < 35 ? 'text-rose-500' : 'text-indigo-600');
+            }
+            updateVitalityStatusOverview();
+        }
+
+        function updateVitalityStatusOverview() {
+            if (!isInMainApp()) return;
+            const meta = WEATHER_META[selectedWeather] || WEATHER_META.breeze;
+            const label = WEATHER_LABELS[selectedWeather] || '微風';
+            const desc = isPruningActive
+                ? (isHoursBudgetExceeded()
+                    ? `剪枝已觸發 · ${label} · 體力 ${currentEnergyLevel}%`
+                    : `剪枝待命 · ${label} · 體力 ${currentEnergyLevel}%`)
+                : isScaffoldPhase()
+                    ? (isHoursBudgetExceeded()
+                        ? `腳手架剪枝已觸發 · ${label} · 體力 ${currentEnergyLevel}%`
+                        : `腳手架進行中 · ${label} · 體力 ${currentEnergyLevel}%`)
+                    : `${label} · 體力 ${currentEnergyLevel}% · ${meta.mood}`;
+            document.querySelectorAll('.vitality-overview-icon').forEach(el => {
+                el.innerHTML = `<i data-lucide="${isPruningActive ? 'scissors' : meta.icon}" class="w-5 h-5 ${isPruningActive ? 'text-rose-500' : meta.color}"></i>`;
+            });
+            document.querySelectorAll('.vitality-overview-desc').forEach(el => {
+                el.innerText = desc;
+                el.className = 'vitality-overview-desc text-[10px] truncate ' + (currentEnergyLevel < 35 ? 'text-rose-500' : 'text-slate-400');
+            });
+            lucide.createIcons();
+        }
+
+        function updateAdjustWeatherUI() {
+            document.querySelectorAll('.adjust-weather-card').forEach(card => {
+                const active = card.getAttribute('data-weather') === vitalityDraft.weather;
+                card.classList.toggle('border-indigo-500', active);
+                card.classList.toggle('bg-indigo-50/40', active);
+                card.classList.toggle('scale-[1.02]', active);
+                card.classList.toggle('border-transparent', !active);
+                card.classList.toggle('bg-white/60', !active);
+            });
+            lucide.createIcons();
+        }
+
+        function openVitalityAdjustModal() {
+            vitalityDraft = { weather: selectedWeather, energy: currentEnergyLevel };
+            const adjustSlider = document.getElementById('adjust-energy-slider');
+            const adjustVal = document.getElementById('adjust-energy-val');
+            if (adjustSlider) adjustSlider.value = vitalityDraft.energy;
+            if (adjustVal) {
+                adjustVal.innerText = `${vitalityDraft.energy}%`;
+                adjustVal.className = 'text-sm font-semibold ' + (vitalityDraft.energy < 35 ? 'text-rose-500' : 'text-indigo-600');
+            }
+            updateAdjustWeatherUI();
+            document.getElementById('vitality-adjust-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeVitalityAdjustModal() {
+            document.getElementById('vitality-adjust-modal').classList.add('hidden');
+        }
+
+        function selectAdjustWeather(weather) {
+            vitalityDraft.weather = weather;
+            updateAdjustWeatherUI();
+        }
+
+        function confirmVitalityAdjust() {
+            const prevWeather = selectedWeather;
+            const weatherChanged = vitalityDraft.weather !== selectedWeather;
+            const energyChanged = vitalityDraft.energy !== currentEnergyLevel;
+
+            setWeather(vitalityDraft.weather);
+            currentEnergyLevel = vitalityDraft.energy;
+            updateAllEnergyUI();
+            closeVitalityAdjustModal();
+
+            if (!weatherChanged && !energyChanged) return;
+
+            let vitalitySummary = null;
+            let weatherLabel = null;
+            let energyOnly = false;
+            if (weatherChanged && energyChanged) {
+                vitalitySummary = `身心狀態已更新：${WEATHER_LABELS[vitalityDraft.weather]} · 體力 ${currentEnergyLevel}%`;
+            } else if (weatherChanged) {
+                weatherLabel = WEATHER_LABELS[vitalityDraft.weather];
+            } else {
+                energyOnly = true;
+            }
+
+            applyInlineVitalityEffects({ weatherLabel, energyChanged: energyOnly, vitalitySummary });
+
+            if (shouldAutoTriggerZenBreathing(vitalityDraft.weather, prevWeather) && isInMainApp()) {
+                setTimeout(triggerZenZest, 500);
+            }
+        }
+
+        function isInMainApp() {
+            return document.getElementById('screen-login').classList.contains('hidden') &&
+                document.getElementById('screen-welcome').classList.contains('hidden');
+        }
+
+        function getInlineVitalityTarget() {
+            return document.getElementById('screen-today-todo').classList.contains('hidden') ? 'calendar' : 'schedule';
+        }
+
+        function applyInlineVitalityEffects(options = {}) {
+            const { weatherLabel = null, energyChanged = false, vitalitySummary = null } = options;
+            if (!isInMainApp()) return;
+
+            if (shouldTriggerPruning()) {
+                if (!isPruningActive) {
+                    showPruningModal({ targetView: getInlineVitalityTarget(), midday: true });
+                } else {
+                    syncAllViews();
+                }
+                if (vitalitySummary) {
+                    showToast(vitalitySummary, 'info');
+                } else if (weatherLabel) {
+                    showToast(`體感天氣已更新為「${weatherLabel}」。`, 'info');
+                } else if (energyChanged) {
+                    showToast(`體力/精神已更新為 ${currentEnergyLevel}%。`, 'info');
+                }
+            } else {
+                if (isPruningActive) {
+                    isPruningActive = false;
+                    document.getElementById('pruned-status-badge').classList.add('hidden');
+                    showToast('狀態好轉，身心剪枝保護已解除。', 'success');
+                } else if (vitalitySummary) {
+                    showToast(vitalitySummary, 'info');
+                } else if (weatherLabel) {
+                    showToast(`體感天氣已更新為「${weatherLabel}」。`, 'info');
+                } else if (energyChanged) {
+                    showToast(`體力/精神已更新為 ${currentEnergyLevel}%。`, 'info');
+                }
+                syncAllViews();
+            }
+            updateVitalityStatusOverview();
+        }
+
+        function getTimeOfDayConfig() {
+            return TIME_OF_DAY_PRESETS[simulatedTimeOfDay] || TIME_OF_DAY_PRESETS.morning;
+        }
+
+        function isMiddayCheckIn() {
+            return !getTimeOfDayConfig().isFirstCheckIn;
+        }
+
+        function updateTimeOfDayUI() {
+            const cfg = getTimeOfDayConfig();
+            const clockEl = document.getElementById('status-bar-clock');
+            if (clockEl) clockEl.textContent = cfg.clock;
+
+            const welcomeGreeting = document.getElementById('welcome-time-greeting');
+            if (welcomeGreeting) welcomeGreeting.textContent = cfg.greeting;
+
+            const welcomeDesc = document.getElementById('welcome-time-desc');
+            if (welcomeDesc) welcomeDesc.textContent = cfg.welcomeDesc;
+
+            const welcomeBtn = document.getElementById('welcome-start-btn');
+            if (welcomeBtn) welcomeBtn.textContent = cfg.welcomeBtn;
+
+            const loginBadge = document.getElementById('login-time-badge');
+            if (loginBadge) loginBadge.textContent = cfg.badge;
+
+            const loginTitle = document.getElementById('login-prompt-title');
+            if (loginTitle) loginTitle.textContent = cfg.prompt;
+
+            const loginDesc = document.getElementById('login-prompt-desc');
+            if (loginDesc) loginDesc.textContent = cfg.desc;
+
+            const loginBtnCalendar = document.getElementById('login-btn-calendar');
+            if (loginBtnCalendar) loginBtnCalendar.textContent = cfg.loginBtnCalendar;
+
+            const loginBtnSchedule = document.getElementById('login-btn-schedule');
+            if (loginBtnSchedule) loginBtnSchedule.textContent = cfg.loginBtnSchedule;
+
+            const welcomeIcon = document.getElementById('welcome-time-icon');
+            if (welcomeIcon) {
+                welcomeIcon.setAttribute('data-lucide', cfg.icon);
+                lucide.createIcons();
+            }
+
+            updateConsoleTimeOfDayUI();
+        }
+
+        function updateConsoleTimeOfDayUI() {
+            ['morning', 'noon', 'afternoon', 'evening'].forEach(period => {
+                const btn = document.getElementById(`console-time-${period}`);
+                if (!btn) return;
+                const active = simulatedTimeOfDay === period;
+                btn.classList.toggle('ring-2', active);
+                btn.classList.toggle('ring-sky-300', active);
+                btn.classList.toggle('bg-sky-600', active);
+                btn.classList.toggle('bg-sky-800', !active);
+            });
+        }
+
+        function setSimulatedTimeOfDay(period) {
+            if (!TIME_OF_DAY_PRESETS[period]) return;
+            simulatedTimeOfDay = period;
+            updateTimeOfDayUI();
+        }
+
+        function simulateAppOpenAtTime(period) {
+            if (!TIME_OF_DAY_PRESETS[period]) return;
+            setSimulatedTimeOfDay(period);
+            cancelZenBreathing();
+            document.getElementById('vitality-adjust-modal').classList.add('hidden');
+            document.getElementById('pruning-modal').classList.add('hidden');
+            document.getElementById('screen-zen').classList.add('hidden');
+            document.getElementById('screen-calendar').classList.add('hidden');
+            document.getElementById('screen-today-todo').classList.add('hidden');
+            document.getElementById('screen-login').classList.add('hidden');
+            document.getElementById('screen-welcome').classList.remove('hidden');
+            showToast(`已模擬${TIME_OF_DAY_PRESETS[period].label}開啟 App`, 'info');
+        }
+
+        function startOnboarding() {
+            updateTimeOfDayUI();
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('screen-login').classList.remove('hidden');
+            updateAllWeatherUI();
+            updateAllEnergyUI();
+        }
+
+        function updateAllWeatherUI() {
+            document.querySelectorAll('.weather-card').forEach(card => {
+                const active = card.getAttribute('data-weather') === selectedWeather;
+                card.classList.toggle('border-indigo-500', active);
+                card.classList.toggle('bg-indigo-50/30', active);
+                card.classList.toggle('scale-[1.03]', active);
+                card.classList.toggle('border-transparent', !active);
+                card.classList.toggle('bg-white/40', !active);
+            });
+            lucide.createIcons();
+        }
+
+        function setWeather(weather) {
+            selectedWeather = weather;
+            updateAllWeatherUI();
+            updateVitalityStatusOverview();
+        }
+
+        function selectWeather(weather, element) {
+            setWeather(weather);
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `absolute top-12 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl text-[10px] font-semibold shadow-lg text-white text-center w-[90%] transition-all duration-300 opacity-0`;
+            if (type === 'warning') {
+                toast.className += ' bg-amber-500 border border-amber-400';
+            } else if (type === 'success') {
+                toast.className += ' bg-emerald-600 border border-emerald-500';
+            } else if (type === 'protect') {
+                toast.className += ' bg-indigo-600 border border-indigo-500';
+            } else {
+                toast.className += ' bg-indigo-950/90 border border-indigo-900';
+            }
+            toast.innerText = message;
+            document.getElementById('app-content').appendChild(toast);
+            setTimeout(() => { toast.classList.remove('opacity-0'); toast.classList.add('opacity-100'); }, 10);
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function textHasAny(text, keywords) {
+            return keywords.some(k => text.includes(k));
+        }
+
+        const IMPORTANT_PEOPLE_KEYWORDS = ['老師', '教授', '家長', '導師', '父母', '爸媽'];
+        const LEISURE_KEYWORDS = [
+            '吃飯', '聚餐', '約會', '聊天', '社交', '聚會', '旅遊', '逛街', '購物',
+            '咖啡', '下午茶', '放鬆', '放空', '休息', '睡覺', '遊戲', '玩樂', '散步',
+            '午餐', '晚餐', '早餐', '白噪音', '看電影', '聽音樂', '🍱', '👗', '🎧'
+        ];
+        const HOUSEWORK_KEYWORDS = [
+            '家事', '打掃', '整理', '倒垃圾', '洗衣服', '曬衣服', '拖地', '洗碗',
+            '澆花', '掃除', '收納', '收拾', '清理', '雜物', '🧺', '🧹'
+        ];
+        const SOCIAL_WITH_OTHERS_KEYWORDS = [
+            '跟', '和', '與', '一起', '同學', '朋友', '室友', '聚會', '聚餐', '約會',
+            '聊天', '社交', '見面', '同事', '夥伴', '家人', '兄弟', '姊妹', '閨蜜', '男友', '女友'
+        ];
+
+        function classifyPersonalLifeTask(text, aiCategory) {
+            if (textHasAny(text, IMPORTANT_PEOPLE_KEYWORDS)) {
+                return { aiCategory: 'high', weight: '3', isProtected: false };
+            }
+            if (textHasAny(text, SOCIAL_WITH_OTHERS_KEYWORDS)) {
+                return { aiCategory, weight: '4', isProtected: false };
+            }
+            return { aiCategory, weight: '5', isProtected: false };
+        }
+
+        function analyzeAndClassifyTaskWithAI(title, location = '') {
+            const text = `${title} ${location}`.toLowerCase();
+
+            const isClassSafetyNet = text.includes('選課') || (text.includes('上') && text.includes('課'));
+            const isSafetyNet = textHasAny(text, [
+                '考試', '期末考', '期中考', '繳交', '死線', '討論', 'exam', 'quiz',
+                '口試', '答辯', '投稿', '論文審查', 'ta 批改', '成績送交', '截止', 'meeting'
+            ]) || isClassSafetyNet ||
+                ((text.includes('期末') || text.includes('期中')) && text.includes('考'));
+
+            if (isSafetyNet) {
+                return { aiCategory: 'high', weight: '1', isProtected: true };
+            }
+
+            const isWeight1Only = ((text.includes('作業') || text.includes('報告') || text.includes('論文')) && !text.includes('繳交')) ||
+                ((text.includes('期末') || text.includes('期中')) && !text.includes('考')) ||
+                textHasAny(text, ['簡報', '實驗室打掃', '報帳', '採購', '核銷', '預約儀器', '指導教授信件']);
+
+            if (isWeight1Only) {
+                return { aiCategory: 'high', weight: '1', isProtected: false };
+            }
+
+            if (textHasAny(text, ['文獻', '閱讀', '寫作', '程式撰寫', '實驗分析', 'meeting', '分析', '重構', '論文草稿'])) {
+                return { aiCategory: 'high', weight: '2', isProtected: false };
+            }
+
+            if (textHasAny(text, ['報帳', '收據', '回覆', '信件', '預約', '器材', '影印', '填表', '採購'])) {
+                return { aiCategory: 'high', weight: '3', isProtected: false };
+            }
+
+            if (textHasAny(text, LEISURE_KEYWORDS)) {
+                return classifyPersonalLifeTask(text, 'empty');
+            }
+
+            if (textHasAny(text, HOUSEWORK_KEYWORDS)) {
+                return classifyPersonalLifeTask(text, 'low');
+            }
+
+            return { aiCategory: 'high', weight: '2', isProtected: false };
+        }
+
+        function ensureEventMeta(event) {
+            const hadPrepWarning = hasPrepWarningEnabled(event);
+            const result = analyzeAndClassifyTaskWithAI(event.title, event.location || '');
+            if (result.isProtected || hadPrepWarning) {
+                event.weight = '1';
+                event.isProtected = true;
+                event.aiCategory = 'high';
+            } else if (result.weight === '1') {
+                event.weight = '1';
+                event.isProtected = false;
+                event.aiCategory = result.aiCategory || 'high';
+            } else {
+                event.weight = result.weight;
+                event.aiCategory = result.aiCategory;
+                event.isProtected = false;
+            }
+            if (event.durationHours == null) event.durationHours = 1.0;
+            if (event.completed == null) event.completed = false;
+        }
+
+        function isScaffoldPhase(phase = currentPhase) {
+            return Object.prototype.hasOwnProperty.call(SCAFFOLD_PHASE_CONFIG, phase);
+        }
+
+        function getScaffoldConfig(phase = currentPhase) {
+            return SCAFFOLD_PHASE_CONFIG[phase] || null;
+        }
+
+        function getScaffoldMicroTaskLimit(phase = currentPhase) {
+            return getScaffoldConfig(phase)?.microLimit || 0;
+        }
+
+        function isScaffoldEditLocked() {
+            return isScaffoldPhase();
+        }
+
+        function applyScaffoldUI() {
+            const clearBtn = document.getElementById('p-clear-btn');
+            const focusPanel = document.getElementById('p-focus-panel');
+            const locked = isScaffoldEditLocked();
+            if (clearBtn) clearBtn.classList.toggle('opacity-40', locked);
+            if (focusPanel) focusPanel.classList.toggle('opacity-50', locked);
+            updateAddEventScaffoldUI();
+        }
+
+        function getScaffoldMicroTasks(sortedDayEvents, limit = getScaffoldMicroTaskLimit()) {
+            const pools = { '1': [], '2': [], '3': [], '4': [], '5': [] };
+            sortedDayEvents.forEach(e => {
+                if (e.isProtected) return;
+                if (pools[e.weight]) pools[e.weight].push(e);
+            });
+            const result = [];
+            for (const weight of ['1', '2', '3', '4', '5']) {
+                for (const event of pools[weight]) {
+                    if (result.length >= limit) return result;
+                    result.push(event);
+                }
+            }
+            return result;
+        }
+
+        function parseLocalDateString(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d, 12, 0, 0);
+        }
+
+        function formatLocalDateString(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function addDaysToDateStr(dateStr, days) {
+            const d = parseLocalDateString(dateStr);
+            d.setDate(d.getDate() + days);
+            return formatLocalDateString(d);
+        }
+
+        function getPrepPeriodStartDateStr(event) {
+            if (!hasPrepWarningEnabled(event)) return null;
+            return addDaysToDateStr(event.deadlineDateStr, -event.prepDays);
+        }
+
+        function hasPrepWarningEnabled(event) {
+            return !!(event.prepDays > 0 && event.deadlineDateStr);
+        }
+
+        function getEventDisplayTitle(event, viewDate = currentSelectedDate) {
+            const title = event.title || '';
+            if (hasPrepWarningEnabled(event) && isPrepPeriodView(event, viewDate) && !title.startsWith('準備')) {
+                return `準備${title}`;
+            }
+            return title;
+        }
+
+        function getDayCandidatesForView(viewDate = currentSelectedDate) {
+            const sameDay = eventsDatabase.filter(e => e.date === viewDate);
+            sameDay.forEach(ensureEventMeta);
+            const combined = [...sameDay];
+            getPrepPeriodEvents(viewDate).forEach(e => {
+                if (!combined.some(item => item.id === e.id)) combined.push(e);
+            });
+            return combined.sort((a, b) => getEventSortKey(a, viewDate) - getEventSortKey(b, viewDate));
+        }
+
+        function applyScaffoldFilter(candidates, viewDate = currentSelectedDate) {
+            const protectedEvents = candidates.filter(e => e.isProtected);
+            if (protectedEvents.length > 0) {
+                return protectedEvents.sort((a, b) => getEventSortKey(a, viewDate) - getEventSortKey(b, viewDate));
+            }
+            return getScaffoldMicroTasks(candidates.filter(e => !e.isProtected));
+        }
+
+        function shouldApplyMicroTaskLimit() {
+            return isScaffoldPhase();
+        }
+
+        function isD7PruningActive() {
+            return isPruningActive && !shouldApplyMicroTaskLimit();
+        }
+
+        function applyD7PruningFilter(candidates) {
+            return candidates.filter(e => e.isProtected || e.weight !== '5');
+        }
+
+        function calculateTotalPlannedHoursAll(viewDate = currentSelectedDate) {
+            let total = 0;
+            getDayCandidatesForView(viewDate).forEach(e => {
+                total += getEventDurationForView(e, viewDate);
+            });
+            return parseFloat(total.toFixed(1));
+        }
+
+        function calculateNonProtectedPlannedHoursAll(viewDate = currentSelectedDate) {
+            let total = 0;
+            getDayCandidatesForView(viewDate).forEach(e => {
+                if (!e.isProtected) total += getEventDurationForView(e, viewDate);
+            });
+            return parseFloat(total.toFixed(1));
+        }
+
+        function isHoursBudgetExceeded(viewDate = currentSelectedDate) {
+            const planned = unreportedThrottling
+                ? calculateNonProtectedPlannedHoursAll(viewDate)
+                : calculateTotalPlannedHoursAll(viewDate);
+            return planned >= calculateMaxAllowedHours();
+        }
+
+        function shouldApplyScaffoldVisibilityFilter(viewDate = currentSelectedDate) {
+            return isScaffoldPhase() && isHoursBudgetExceeded(viewDate);
+        }
+
+        function shouldApplyD7PruningVisibilityFilter(viewDate = currentSelectedDate) {
+            return isD7PruningActive() && isHoursBudgetExceeded(viewDate);
+        }
+
+        function getMicroTaskLimitVisibleEvents(viewDate = currentSelectedDate) {
+            const candidates = getDayCandidatesForView(viewDate);
+            if (candidates.some(e => e.isProtected)) return [];
+            return getScaffoldMicroTasks(candidates.filter(e => !e.isProtected));
+        }
+
+        function getDaysUntilDeadline(event, viewDate = currentSelectedDate) {
+            if (!event.deadlineDateStr) return null;
+            const deadline = parseLocalDateString(event.deadlineDateStr);
+            const today = parseLocalDateString(viewDate);
+            return Math.round((deadline.getTime() - today.getTime()) / (1000 * 3600 * 24));
+        }
+
+        function isPrepPeriodView(event, viewDate = currentSelectedDate) {
+            if (!hasPrepWarningEnabled(event) || !event.isProtected) return false;
+            const diffDays = getDaysUntilDeadline(event, viewDate);
+            return diffDays > 0 && diffDays <= event.prepDays;
+        }
+
+        function resolveEventTimeFields(event, viewDate = currentSelectedDate) {
+            if (isPrepPeriodView(event, viewDate) && event.prepTimeType) {
+                return {
+                    timeType: event.prepTimeType,
+                    start: event.prepStart,
+                    end: event.prepEnd,
+                    fuzzy: event.prepFuzzy,
+                    durationHours: event.prepDurationHours != null ? event.prepDurationHours : event.durationHours
+                };
+            }
+            return {
+                timeType: event.timeType,
+                start: event.start,
+                end: event.end,
+                fuzzy: event.fuzzy,
+                durationHours: event.durationHours
+            };
+        }
+
+        function getEventDurationForView(event, viewDate = currentSelectedDate) {
+            const fields = resolveEventTimeFields(event, viewDate);
+            return parseFloat(fields.durationHours != null ? fields.durationHours : 1.0);
+        }
+
+        function getEventTimeLabel(e, viewDate = currentSelectedDate) {
+            const fields = resolveEventTimeFields(e, viewDate);
+            if (fields.timeType === 'specific') {
+                return { start: fields.start, end: fields.end, display: `${fields.start} - ${fields.end}` };
+            }
+            const fuzzyTimes = {
+                morning: { start: '09:00', end: '12:00', display: '09:00 - 12:00 · 上午' },
+                afternoon: { start: '14:00', end: '17:00', display: '14:00 - 17:00 · 下午' },
+                'all-day': { start: '09:00', end: '21:00', display: '09:00 起 · 整日順流' },
+            };
+            return fuzzyTimes[fields.fuzzy] || { start: '99:99', end: '99:99', display: '時間待定' };
+        }
+
+        function getEventSortKey(e, viewDate = currentSelectedDate) {
+            const t = getEventTimeLabel(e, viewDate);
+            const [h, m] = t.start.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function getVisibleDayEvents(dateStr) {
+            return getTimelineEvents(dateStr);
+        }
+
+        function isEventVisibleToday(event) {
+            const dateStr = event.date || currentSelectedDate;
+            return getVisibleDayEvents(dateStr).some(e => e.id === event.id);
+        }
+
+        function willEventShowInScaffold(event, viewDate = currentSelectedDate) {
+            if (!isScaffoldPhase()) return true;
+            ensureEventMeta(event);
+            if (event.isProtected) return true;
+
+            let candidates = getDayCandidatesForView(viewDate);
+            if (!candidates.some(e => e.id === event.id)) {
+                candidates = [...candidates, event];
+                candidates.sort((a, b) => getEventSortKey(a, viewDate) - getEventSortKey(b, viewDate));
+            }
+            if (candidates.some(e => e.isProtected)) return false;
+            const visible = getScaffoldMicroTasks(candidates.filter(e => !e.isProtected));
+            return visible.some(e => e.id === event.id);
+        }
+
+        function willEventShowInView(event, viewDate = currentSelectedDate) {
+            ensureEventMeta(event);
+            if (event.isProtected) return true;
+            if (shouldApplyMicroTaskLimit()) {
+                if (!isHoursBudgetExceeded(viewDate)) return true;
+                return willEventShowInScaffold(event, viewDate);
+            }
+            if (isD7PruningActive()) {
+                if (!isHoursBudgetExceeded(viewDate)) return true;
+                return event.weight !== '5';
+            }
+            return true;
+        }
+
+        function notifyAfterEventAdd(event, aiResult) {
+            if (aiResult.isProtected) {
+                showToast('🛡️ 學業安全網行程已新增，腳手架模式下仍會完整顯示。', 'protect');
+                return;
+            }
+            if (shouldApplyMicroTaskLimit()) {
+                const limit = getScaffoldMicroTaskLimit();
+                if (!isHoursBudgetExceeded()) {
+                    showToast(`新增成功！${formatAiFeedback(aiResult)}（腳手架進行中，達承載上限前皆可見）`, 'success');
+                } else if (isEventVisibleToday(event)) {
+                    showToast(`新增成功！${formatAiFeedback(aiResult)}（剪枝已觸發，今日可見行程上限 ${limit} 項）`, 'success');
+                } else {
+                    showToast(`行程已儲存。剪枝已觸發，非安全網行程已依上限自動隱藏（資料保留，Day 7 解鎖後將完整顯示）。`, 'info');
+                }
+                return;
+            }
+            if (isD7PruningActive()) {
+                if (!isHoursBudgetExceeded()) {
+                    showToast(`新增成功！${formatAiFeedback(aiResult)}（剪枝待命，達承載上限前皆可見）`, 'success');
+                    return;
+                }
+                if (isEventVisibleToday(event)) {
+                    const dimNote = ['2', '3', '4'].includes(event.weight) ? '（分級二～四以淡化顯示）' : '';
+                    showToast(`新增成功！${formatAiFeedback(aiResult)}${dimNote}`, 'success');
+                } else {
+                    showToast(`行程已儲存。剪枝已觸發，分級五行程已自動隱藏（資料保留）。`, 'info');
+                }
+                return;
+            }
+            showToast(`新增成功！${formatAiFeedback(aiResult)}`, 'success');
+        }
+
+        function getPrepPeriodEvents(viewDate = currentSelectedDate) {
+            if (!prepWarningDisplayEnabled) return [];
+            const prepEvents = [];
+            eventsDatabase.forEach(e => {
+                if (isPrepPeriodView(e, viewDate)) {
+                    if (!prepEvents.some(item => item.id === e.id)) prepEvents.push(e);
+                }
+            });
+            return prepEvents;
+        }
+
+        function getTimelineEvents(viewDate = currentSelectedDate) {
+            const candidates = getDayCandidatesForView(viewDate);
+
+            if (shouldApplyScaffoldVisibilityFilter(viewDate)) {
+                return applyScaffoldFilter(candidates, viewDate);
+            }
+
+            if (shouldApplyD7PruningVisibilityFilter(viewDate)) {
+                return applyD7PruningFilter(candidates);
+            }
+
+            return candidates;
+        }
+
+        function getEventVisualClass(e) {
+            let cls = '';
+            if (shouldApplyD7PruningVisibilityFilter() && (e.weight === '2' || e.weight === '3' || e.weight === '4') && !e.isProtected) {
+                cls += ' opacity-40 scale-95 border-dashed';
+            }
+            if (e.isProtected) cls += ' ring-2 ring-indigo-500/80 bg-indigo-50/20';
+            return cls;
+        }
+
+        function formatAiFeedback(aiResult) {
+            const brain = aiResult.aiCategory === 'empty' ? '放空' : aiResult.aiCategory === 'low' ? '低腦' : '高腦';
+            return `AI 分級：分級${aiResult.weight} · 腦力：${brain}`;
+        }
+
+        function syncAllViews() {
+            eventsDatabase.forEach(ensureEventMeta);
+            renderCalendarGrid();
+            renderEventsList(currentSelectedDate);
+            renderTimelineSchedule();
+            updateVitalityStatusOverview();
+        }
+
+        function hideMainScreens() {
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('screen-login').classList.add('hidden');
+            document.getElementById('screen-calendar').classList.add('hidden');
+            document.getElementById('screen-today-todo').classList.add('hidden');
+        }
+
+        function shouldTriggerPruning() {
+            return selectedWeather === 'storm' || currentEnergyLevel < 35;
+        }
+
+        function buildPruningReasonHtml(prefix = '偵測到今晨你處於') {
+            const parts = [];
+            if (selectedWeather === 'storm') parts.push('「暴雨氣候」');
+            if (currentEnergyLevel < 35) parts.push(`生理能量低於 35%（目前 ${currentEnergyLevel}%）`);
+            return `⚠️ ${prefix}<b>${parts.join('，且')}</b>。`;
+        }
+
+        function showPruningModal(options = {}) {
+            const { targetView = 'calendar', midday = false } = options;
+            document.getElementById('pruning-modal-reason').innerHTML = buildPruningReasonHtml(
+                midday ? '偵測到你目前處於' : '偵測到今晨你處於'
+            );
+            document.getElementById('pruning-modal').setAttribute('data-target', targetView);
+            document.getElementById('pruning-modal').setAttribute('data-midday', midday ? 'true' : 'false');
+            document.getElementById('pruning-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function navigateAfterMorning(targetView, triggerFogZen) {
+            syncAllViews();
+            if (targetView === 'schedule') {
+                goToTodayTodoScreen(false);
+            } else {
+                goToCalendarScreen();
+            }
+            const shouldZen = triggerFogZen
+                || selectedWeather === 'storm'
+                || (!isPruningActive && selectedWeather === 'fog');
+            if (shouldZen) {
+                setTimeout(triggerZenZest, 600);
+            }
+        }
+
+        function syncDatetimeInputs(dateStr) {
+            document.getElementById('event-start-time').value = `${dateStr}T10:00`;
+            document.getElementById('event-end-time').value = `${dateStr}T12:00`;
+        }
+
+        function initializeDatabaseForPhase() {
+            eventsDatabase = JSON.parse(JSON.stringify(currentPhase === 'd7' ? DATABASE_D7 : DATABASE_D1));
+            eventsDatabase.forEach(ensureEventMeta);
+        }
+
+        function switchDemoPhase(phase) {
+            currentPhase = phase;
+            isPruningActive = false;
+            document.getElementById('pruned-status-badge').classList.add('hidden');
+            initializeDatabaseForPhase();
+            updatePhaseBadges();
+            applyScaffoldUI();
+
+            if (isScaffoldPhase()) {
+                document.getElementById('achievement-modal').classList.add('hidden');
+                const cfg = getScaffoldConfig();
+                const phaseToast = {
+                    d1: '已跳躍至 Day 1🌱。可無限新增；達承載上限後動態露出 1 項行程（優先一→五）。',
+                    d3: '已跳躍至 Day 3🌿。可無限新增；達承載上限後動態露出 2 項行程（優先一→五）。',
+                    d5: '已跳躍至 Day 5🌳。可無限新增；達承載上限後動態露出 3 項行程（優先一→五）。',
+                };
+                showToast(phaseToast[currentPhase] || `已跳躍至腳手架階段，達上限後動態露出 ${cfg.microLimit} 項行程。`, 'info');
+            } else {
+                document.getElementById('achievement-modal').classList.remove('hidden');
+                showToast('已跳躍至 Day 7🏆。自律解鎖：所有行程完整顯示與手動配置。', 'success');
+                lucide.createIcons();
+            }
+            unreportedThrottling = false;
+            prepWarningDisplayEnabled = true;
+            updateUnreportedThrottlingUI();
+            updatePrepWarningDisplayUI();
+            syncAllViews();
+        }
+
+        function dismissAchievement() {
+            document.getElementById('achievement-modal').classList.add('hidden');
+            showToast('自律適應解鎖成功🏆！所有行程手動配置與 3 小時專注番茄鐘已為你安全解鎖！', 'success');
+        }
+
+        function updatePhaseBadges() {
+            const badgeCalendar = document.getElementById('phase-badge-calendar');
+            const badgeSchedule = document.getElementById('phase-badge-schedule');
+
+            const htmlD7 = `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-0.5"><i data-lucide="award" class="w-3 h-3"></i>自律🏆D7</span>`;
+            const scaffoldCfg = getScaffoldConfig();
+            const htmlScaffold = scaffoldCfg
+                ? `<span class="${scaffoldCfg.badgeClass} px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-0.5"><i data-lucide="${scaffoldCfg.icon}" class="w-3 h-3"></i>${scaffoldCfg.label}</span>`
+                : htmlD7;
+
+            if (isScaffoldPhase()) {
+                badgeCalendar.innerHTML = htmlScaffold;
+                badgeSchedule.innerHTML = htmlScaffold;
+            } else {
+                badgeCalendar.innerHTML = htmlD7;
+                badgeSchedule.innerHTML = htmlD7;
+            }
+            lucide.createIcons();
+        }
+
+        function updateUnreportedThrottlingUI() {
+            const banner = document.getElementById('unreported-status-banner');
+            const btnOn = document.getElementById('console-unreported-on');
+            const btnOff = document.getElementById('console-unreported-off');
+            if (banner) banner.classList.toggle('hidden', !unreportedThrottling);
+            if (btnOn) {
+                btnOn.className = unreportedThrottling
+                    ? 'py-1.5 bg-amber-500 ring-2 ring-amber-300 rounded-lg text-[8px] font-semibold transition-all'
+                    : 'py-1.5 bg-amber-700 hover:bg-amber-600 rounded-lg text-[8px] font-semibold transition-all';
+            }
+            if (btnOff) {
+                btnOff.className = !unreportedThrottling
+                    ? 'py-1.5 bg-slate-500 ring-2 ring-slate-300 rounded-lg text-[8px] font-semibold transition-all'
+                    : 'py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-[8px] font-semibold transition-all';
+            }
+            lucide.createIcons();
+        }
+
+        function setUnreportedThrottling(enabled) {
+            if (unreportedThrottling === enabled) return;
+            unreportedThrottling = enabled;
+            updateUnreportedThrottlingUI();
+            if (unreportedThrottling) {
+                showToast('⚠️ [Demo] 昨日無回報完成。今日安全規劃時數已降級限流。', 'warning');
+            } else {
+                showToast('[Demo] 昨日自律良好，行程時數限制已恢復正常。', 'success');
+            }
+            renderTimelineSchedule();
+        }
+
+        function goToTodayTodoScreen(runSync = true) {
+            hideMainScreens();
+            document.getElementById('screen-today-todo').classList.remove('hidden');
+            if (runSync) syncAllViews();
+            else renderTimelineSchedule();
+            lucide.createIcons();
+        }
+
+        function goToCalendarScreen() {
+            hideMainScreens();
+            document.getElementById('screen-calendar').classList.remove('hidden');
+            document.getElementById('pruned-status-badge').classList.toggle('hidden', !isPruningActive);
+            syncAllViews();
+            lucide.createIcons();
+        }
+
+        function injectPresetProtectedTask(title, prepDays, deadlineOffsetDays) {
+            const today = parseLocalDateString(currentSelectedDate);
+            const deadlineDate = new Date(today.getTime() + (deadlineOffsetDays * 24 * 60 * 60 * 1000));
+
+            const year = deadlineDate.getFullYear();
+            const month = String(deadlineDate.getMonth() + 1).padStart(2, '0');
+            const day = String(deadlineDate.getDate()).padStart(2, '0');
+            const deadlineDateStr = `${year}-${month}-${day}`;
+
+            const aiResult = analyzeAndClassifyTaskWithAI(title);
+
+            const newEvent = {
+                id: Date.now(),
+                title: title,
+                location: "綜合大樓 302 階梯教室",
+                travelTime: "15分鐘",
+                timeType: "specific",
+                start: "09:00",
+                end: "11:00",
+                date: deadlineDateStr,
+                repeat: "never",
+                weight: "1",
+                aiCategory: "high",
+                isProtected: true,
+                durationHours: 2.0,
+                completed: false,
+                prepDays: prepDays,
+                deadlineDateStr: deadlineDateStr,
+                prepTimeType: "fuzzy",
+                prepFuzzy: "morning",
+                prepDurationHours: 1.0
+            };
+
+            eventsDatabase.push(newEvent);
+            showToast(`🛡️ 期末考已成功寫入資料庫！截止死線為 ${deadlineDateStr} (準備期：${prepDays}天)。`, 'protect');
+            syncAllViews();
+        }
+
+        function injectPresetTask(title, start, end, weight, timeType) {
+            const aiResult = analyzeAndClassifyTaskWithAI(title);
+            const startParts = start.split(':');
+            const endParts = end.split(':');
+            const durationHours = Math.max(parseFloat(((parseInt(endParts[0]) * 60 + parseInt(endParts[1]) - parseInt(startParts[0]) * 60 - parseInt(startParts[1])) / 60).toFixed(1)), 0.5);
+            eventsDatabase.push({
+                id: Date.now(),
+                title,
+                location: 'Jacobs Hall 310',
+                travelTime: '15分鐘',
+                timeType,
+                start,
+                end,
+                date: currentSelectedDate,
+                repeat: 'never',
+                weight,
+                aiCategory: aiResult.aiCategory,
+                isProtected: aiResult.isProtected,
+                durationHours,
+                completed: false
+            });
+            showToast(`🛡️ 已注入「${title}」！即使在 Day 1 動態減負或暴雨剪枝中也維持高亮顯示。`, 'protect');
+            syncAllViews();
+        }
+
+        function calculateVisiblePlannedHours(viewDate = currentSelectedDate) {
+            let total = 0;
+            getTimelineEvents(viewDate).forEach(e => {
+                total += getEventDurationForView(e, viewDate);
+            });
+            return parseFloat(total.toFixed(1));
+        }
+
+        function calculateVisibleNonProtectedPlannedHours(viewDate = currentSelectedDate) {
+            let total = 0;
+            getTimelineEvents(viewDate).forEach(e => {
+                if (!e.isProtected) total += getEventDurationForView(e, viewDate);
+            });
+            return parseFloat(total.toFixed(1));
+        }
+
+        function calculateNonProtectedPlannedHours(viewDate = currentSelectedDate) {
+            return calculateVisibleNonProtectedPlannedHours(viewDate);
+        }
+
+        function getBudgetCheckHours(viewDate = currentSelectedDate) {
+            return unreportedThrottling
+                ? calculateVisibleNonProtectedPlannedHours(viewDate)
+                : calculateVisiblePlannedHours(viewDate);
+        }
+
+        function isSafetyNetBudgetExempt(event) {
+            return unreportedThrottling && event && event.isProtected;
+        }
+
+        function checkHoursBudgetBeforeAdd(durationHours, draftEvent) {
+            if (isScaffoldPhase() || isPruningActive) return true;
+            if (draftEvent && !willEventShowInView(draftEvent)) {
+                return true;
+            }
+            if (isSafetyNetBudgetExempt(draftEvent)) return true;
+
+            const currentBudgeted = getBudgetCheckHours();
+            const maxAllowed = calculateMaxAllowedHours();
+            if (currentBudgeted + durationHours > maxAllowed) {
+                const totalAfter = calculateTotalPlannedHours() + durationHours;
+                const budgetLabel = unreportedThrottling
+                    ? `非安全網行程時數 (${(currentBudgeted + durationHours).toFixed(1)} 小時)`
+                    : `總時數 (${totalAfter.toFixed(1)} 小時)`;
+                showToast(`💡 慢下來... 加上此行程後${budgetLabel} 將超出今日承載上限 (${maxAllowed} 小時)。學業安全網行程不受限流影響。`, 'warning');
+                return false;
+            }
+            return true;
+        }
+
+        function triggerQuickAdd() {
+            if (isScaffoldPhase()) {
+                openAddEventScreen();
+                return;
+            }
+
+            const titleInput = prompt('請手動輸入今日流動行程名稱 (AI 後手將自動分析語意分級)：');
+            if (!titleInput || !titleInput.trim()) return;
+            const titleStr = titleInput.trim();
+            const aiResult = analyzeAndClassifyTaskWithAI(titleStr);
+
+            if (!isScaffoldPhase() && !isPruningActive && (!aiResult.isProtected || !unreportedThrottling)) {
+                const currentBudgeted = getBudgetCheckHours();
+                const maxAllowed = calculateMaxAllowedHours();
+                if (currentBudgeted >= maxAllowed) {
+                    const budgetLabel = unreportedThrottling ? '非安全網行程時數' : '行程總時數';
+                    showToast(`💡 慢下來... 你今天已規劃的${budgetLabel} (${currentBudgeted} 小時) 已達當前身心承載極限 (${maxAllowed} 小時)。學業安全網行程不受限流影響。`, 'warning');
+                    return;
+                }
+            }
+
+            const newEvent = {
+                id: Date.now(),
+                title: titleStr,
+                location: '個人宿舍',
+                travelTime: 'none',
+                timeType: 'fuzzy',
+                fuzzy: 'all-day',
+                date: currentSelectedDate,
+                repeat: 'never',
+                weight: aiResult.weight,
+                aiCategory: aiResult.aiCategory,
+                isProtected: aiResult.isProtected,
+                durationHours: 1.0,
+                completed: false
+            };
+
+            if (!checkHoursBudgetBeforeAdd(newEvent.durationHours, newEvent)) return;
+
+            eventsDatabase.push(newEvent);
+            notifyAfterEventAdd(newEvent, aiResult);
+            syncAllViews();
+        }
+
+        function clearTodaySchedule() {
+            if (isScaffoldEditLocked()) {
+                const limit = getScaffoldMicroTaskLimit();
+                showToast(`腳手架防護中：今日僅開放 ${limit} 項行程，無法清空。讓我們踏出輕鬆的一步吧！`, 'warning');
+                return;
+            }
+            if (confirm('是否要暫緩清空今天的所有行程，給自己徹底放空的一天？')) {
+                eventsDatabase = eventsDatabase.filter(e => e.date !== currentSelectedDate);
+                syncAllViews();
+            }
+        }
+
+        function calculateTotalPlannedHours(viewDate = currentSelectedDate) {
+            return calculateVisiblePlannedHours(viewDate);
+        }
+
+        const PHASE_HOURS = {
+            d1: { maxHours: 3.0, throttleHours: 1.5 },
+            d3: { maxHours: 4.0, throttleHours: 2.0 },
+            d5: { maxHours: 6.0, throttleHours: 3.0 },
+            d7: { maxHours: 8.0, throttleHours: 4.0 },
+        };
+
+        function getVitalityHoursThrottle() {
+            const energy = currentEnergyLevel;
+            const weather = selectedWeather;
+            if (energy < 20 && (weather === 'fog' || weather === 'storm')) {
+                return {
+                    multiplier: 0.5,
+                    label: '體力低於 20% 且情緒為濃霧／暴雨，今日建議時數已自動減半',
+                };
+            }
+            if (energy < 10 && (weather === 'happy' || weather === 'breeze')) {
+                return {
+                    multiplier: 0.8,
+                    label: '體力低於 10% 且情緒為陽光／微風，今日建議時數限流至 80%',
+                };
+            }
+            return { multiplier: 1.0, label: null };
+        }
+
+        function isVitalityHoursThrottlingActive() {
+            return getVitalityHoursThrottle().multiplier < 1;
+        }
+
+        function calculateMaxAllowedHours() {
+            const hours = PHASE_HOURS[currentPhase] || PHASE_HOURS.d7;
+            const base = unreportedThrottling ? hours.throttleHours : hours.maxHours;
+            const vitality = getVitalityHoursThrottle();
+            return parseFloat((base * vitality.multiplier).toFixed(1));
+        }
+
+        function updateVitalityThrottleUI() {
+            const banner = document.getElementById('vitality-throttle-banner');
+            const title = document.getElementById('vitality-throttle-banner-title');
+            const desc = document.getElementById('vitality-throttle-banner-desc');
+            if (!banner) return;
+            const vitality = getVitalityHoursThrottle();
+            const active = vitality.multiplier < 1;
+            banner.classList.toggle('hidden', !active);
+            if (active && desc) desc.textContent = vitality.label;
+            if (active && title) {
+                const pct = Math.round(vitality.multiplier * 100);
+                title.innerHTML = `<i data-lucide="heart-pulse" class="w-3 h-3"></i>身心狀態限流中（${pct}%）`;
+            }
+            lucide.createIcons();
+        }
+
+        function renderTimelineSchedule() {
+            const container = document.getElementById('timeline-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const plannedHours = calculateTotalPlannedHours();
+            const allowedHours = calculateMaxAllowedHours();
+            const budgetHours = getBudgetCheckHours();
+
+            document.getElementById('current-planned-hours').innerText = plannedHours;
+            document.getElementById('max-allowed-hours').innerText = allowedHours;
+
+            const progressPercent = Math.min((budgetHours / allowedHours) * 100, 100);
+            const progressBar = document.getElementById('hours-progress-bar');
+            progressBar.style.width = `${progressPercent}%`;
+
+            if (shouldApplyScaffoldVisibilityFilter()) {
+                progressBar.className = "bg-rose-500 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = `✂️ <b>腳手架剪枝已觸發：</b>依今日上限僅露出 ${getScaffoldMicroTaskLimit()} 項行程（優先一→五）；仍可繼續新增。`;
+            } else if (shouldApplyD7PruningVisibilityFilter()) {
+                progressBar.className = "bg-rose-500 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = '✂️ <b>剪枝已觸發：</b>分級五已隱藏；分級二～四以淡化顯示；仍可繼續新增。';
+            } else if (isScaffoldPhase()) {
+                progressBar.className = progressPercent >= 75 ? "bg-amber-500 h-full transition-all duration-300" : "bg-indigo-600 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = '🌱 <b>腳手架進行中：</b>達承載上限前可自由新增；超出後將依優先分級動態顯示。';
+            } else if (isPruningActive) {
+                progressBar.className = progressPercent >= 75 ? "bg-amber-500 h-full transition-all duration-300" : "bg-indigo-600 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = '🌿 <b>動態剪枝待命：</b>達承載上限前可自由新增；超出後將自動隱藏低優先行程。';
+            } else if (progressPercent >= 100) {
+                progressBar.className = "bg-rose-500 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = unreportedThrottling
+                    ? '⚠️ <b>今天排滿囉：</b>非安全網行程已達限流上限；學業安全網仍可依需求安排，並計入上方總時數。'
+                    : '⚠️ <b>今天排滿囉：</b>為了保護大腦，今天不建議再塞更多高壓行程了。';
+            } else if (progressPercent >= 75) {
+                progressBar.className = "bg-amber-500 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = unreportedThrottling
+                    ? '💡 <b>快滿了：</b>非安全網行程接近限流上限；學業安全網不受此限制。'
+                    : '💡 <b>快滿了：</b>今天能做的事有限，若要再加任務，優先安排放鬆充電類的行程吧。';
+            } else if (isVitalityHoursThrottlingActive()) {
+                progressBar.className = "bg-indigo-600 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = `💗 <b>身心限流：</b>${getVitalityHoursThrottle().label}`;
+            } else {
+                progressBar.className = "bg-indigo-600 h-full transition-all duration-300";
+                document.getElementById('budget-desc').innerHTML = unreportedThrottling
+                    ? '🍃 <b>輕鬆模式：</b>偵測到昨天沒完成任務，非安全網行程已溫和限流；學業安全網不受影響。'
+                    : '🌱 為了不讓你太累，我們今天不排滿，慢慢做完就好。';
+            }
+
+            updateVitalityThrottleUI();
+
+            const combinedEvents = getTimelineEvents();
+            const microLimitVisible = shouldApplyScaffoldVisibilityFilter()
+                ? getMicroTaskLimitVisibleEvents(currentSelectedDate)
+                : [];
+
+            let visibleCount = 0;
+
+            if (combinedEvents.length === 0) {
+                const limit = getScaffoldMicroTaskLimit();
+                const emptyMsg = shouldApplyScaffoldVisibilityFilter()
+                    ? `腳手架剪枝已觸發：安全網行程一律顯示；其餘分級一～五依今日上限僅露出 ${limit} 項（優先一→五）。`
+                    : shouldApplyD7PruningVisibilityFilter()
+                        ? '剪枝已觸發：分級五已隱藏；分級二～四以淡化顯示。'
+                        : '今天沒有任何行程規劃...';
+                container.innerHTML = `<p class="text-xs text-slate-400 italic py-6 text-center leading-relaxed px-2">${emptyMsg}</p>`;
+                lucide.createIcons();
+                return;
+            }
+
+            combinedEvents.forEach(e => {
+                visibleCount++;
+                const time = getEventTimeLabel(e, currentSelectedDate);
+                const viewDuration = getEventDurationForView(e, currentSelectedDate);
+                const currentAiData = AI_BADGE_DATA[e.aiCategory] || AI_BADGE_DATA.high;
+
+                const item = document.createElement('div');
+                item.className = 'bg-white border border-slate-100 p-3.5 rounded-2xl flex justify-between items-start shadow-sm relative transition-all w-full' + getEventVisualClass(e);
+
+                let prepNoticeHtml = '';
+                if (isPrepPeriodView(e, currentSelectedDate)) {
+                    const diffDays = getDaysUntilDeadline(e, currentSelectedDate);
+                    prepNoticeHtml = `<span class="text-[8px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">🛡️ 學術安全網 (離死線 ${diffDays} 天，已進入預視準備期)</span>`;
+                } else if (e.isProtected) {
+                    prepNoticeHtml = '<span class="text-[8px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-bold shadow-sm">🛡️ 學術安全網</span>';
+                }
+
+                const microBadgeHtml = microLimitVisible.some(m => m.id === e.id)
+                    ? '<span class="text-[9px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">動態可見</span>'
+                    : '';
+
+                const deleteButtonHtml = isScaffoldEditLocked()
+                    ? '<span class="text-[9px] text-slate-300 font-semibold italic">保護中</span>'
+                    : `<button type="button" onclick="deleteEvent(${e.id})" class="text-slate-300 hover:text-rose-500 transition-colors p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>`;
+
+                const isChecked = e.completed ? 'checked' : '';
+                const titleStrikethrough = e.completed ? 'line-through text-slate-400' : 'text-slate-800';
+                const selectDisabled = isScaffoldEditLocked() ? 'disabled' : '';
+
+                item.innerHTML = `
+                    <div class="absolute -left-[21px] top-5 w-2.5 h-2.5 rounded-full bg-indigo-400 border-2 border-white shadow-sm"></div>
+
+                    <div class="flex items-center gap-2.5 flex-1">
+                        <input type="checkbox" ${isChecked} onchange="toggleTaskComplete(${e.id}, this.checked)" class="accent-indigo-600 rounded w-4 h-4 cursor-pointer" title="標記完成">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <span class="text-[10px] font-bold text-slate-400">${time.display} (${viewDuration}小時)</span>
+                                <span class="text-[9px] font-semibold px-2 py-0.5 rounded-md ${currentAiData.class}">${currentAiData.label}</span>
+                                ${prepNoticeHtml}
+                                ${microBadgeHtml}
+                            </div>
+                            <h4 class="text-xs font-semibold mt-1.5 ${titleStrikethrough}">${getEventDisplayTitle(e, currentSelectedDate)}</h4>
+                            <p class="text-[9px] text-slate-400 mt-1 flex items-center gap-0.5"><i data-lucide="map-pin" class="w-2.5 h-2.5"></i>${e.location}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-end gap-2 shrink-0">
+                        <select ${selectDisabled} onchange="overrideAiCategory(${e.id}, this.value)" class="text-[9px] bg-slate-50 border border-slate-200 rounded-lg p-1 text-slate-600 focus:outline-none cursor-pointer" title="AI 自動分類 - 點擊手動修正">
+                            <option value="high" ${e.aiCategory === 'high' ? 'selected' : ''}>🧠 深度專注</option>
+                            <option value="low" ${e.aiCategory === 'low' ? 'selected' : ''}>⚙️ 輕鬆機械</option>
+                            <option value="empty" ${e.aiCategory === 'empty' ? 'selected' : ''}>🌸 徹底充電</option>
+                        </select>
+                        ${deleteButtonHtml}
+                    </div>
+                `;
+
+                container.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function toggleTaskComplete(id, isChecked) {
+            const task = eventsDatabase.find(e => e.id === id);
+            if (task) {
+                task.completed = isChecked;
+                if (isChecked) {
+                    showToast('🎉 太棒了！你順流完成了這項行程。大腦已成功獲得一次勝任感重建！', 'success');
+                }
+            }
+            syncAllViews();
+        }
+
+        function overrideAiCategory(id, newCategory) {
+            const task = eventsDatabase.find(e => e.id === id);
+            if (task) task.aiCategory = newCategory;
+            syncAllViews();
+        }
+
+        function checkFocusCapability() {
+            if (isScaffoldPhase()) {
+                showToast(`大腦保護機制運作中，${getScaffoldConfig().label} 鎖定高壓專注功能。`, 'warning');
+                return;
+            }
+            document.getElementById('focus-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeFocusModal() {
+            document.getElementById('focus-modal').classList.add('hidden');
+        }
+
+        function switchToPomo() {
+            document.getElementById('focus-modal').classList.add('hidden');
+            document.getElementById('pomo-player').classList.remove('hidden');
+            resetPomo();
+        }
+
+        function updatePomoDisplay() {
+            document.getElementById('pomo-time').innerText = `${String(pomoMinutes).padStart(2, '0')}:${String(pomoSeconds).padStart(2, '0')}`;
+        }
+
+        function togglePomo() {
+            if (isPomoRunning) {
+                clearInterval(pomoInterval);
+                isPomoRunning = false;
+                document.getElementById('pomo-icon').setAttribute('data-lucide', 'play');
+            } else {
+                isPomoRunning = true;
+                document.getElementById('pomo-icon').setAttribute('data-lucide', 'pause');
+                pomoInterval = setInterval(() => {
+                    if (pomoSeconds === 0) {
+                        if (pomoMinutes === 0) {
+                            clearInterval(pomoInterval);
+                            isPomoRunning = false;
+                            alert('🍅 番茄專注時間結束！已自動為你觸發「呼呼吸重置」正念陪伴。');
+                            triggerZenZest();
+                            resetPomo();
+                            return;
+                        }
+                        pomoMinutes--;
+                        pomoSeconds = 59;
+                    } else {
+                        pomoSeconds--;
+                    }
+                    updatePomoDisplay();
+                }, 1000);
+            }
+            lucide.createIcons();
+        }
+
+        function stopPomo() {
+            clearInterval(pomoInterval);
+            resetPomo();
+            document.getElementById('pomo-player').classList.add('hidden');
+        }
+
+        function resetPomo() {
+            clearInterval(pomoInterval);
+            pomoMinutes = 25;
+            pomoSeconds = 0;
+            isPomoRunning = false;
+            updatePomoDisplay();
+            document.getElementById('pomo-icon').setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+        }
+
+        function handleMorningDecide(targetView) {
+            pendingMorningTarget = targetView;
+            const isMidday = isMiddayCheckIn();
+            if (shouldTriggerPruning()) {
+                showPruningModal({ targetView, midday: isMidday });
+            } else {
+                isPruningActive = false;
+                navigateAfterMorning(targetView, false);
+            }
+        }
+
+        function applyDynamicPruning() {
+            isPruningActive = true;
+            const modal = document.getElementById('pruning-modal');
+            const isMidday = modal.getAttribute('data-midday') === 'true';
+            const targetView = modal.getAttribute('data-target') || pendingMorningTarget || 'calendar';
+            modal.classList.add('hidden');
+            document.getElementById('pruned-status-badge').classList.toggle('hidden', !isPruningActive);
+
+            const pruneToast = '已啟動身心動態剪枝。達承載上限前可自由新增；超出後將自動隱藏低優先行程。';
+
+            if (isMidday && isInMainApp()) {
+                syncAllViews();
+                showToast(pruneToast, 'info');
+            } else {
+                navigateAfterMorning(targetView, false);
+                showToast(pruneToast, 'info');
+            }
+        }
+
+        function updateAddEventScaffoldUI() {
+            const notice = document.getElementById('add-event-scaffold-notice');
+            if (!notice) return;
+            if (!isScaffoldPhase()) {
+                notice.classList.add('hidden');
+                return;
+            }
+            const limit = getScaffoldMicroTaskLimit();
+            const phaseName = getScaffoldConfig().label;
+            notice.classList.remove('hidden');
+            notice.innerHTML = `
+                <span class="font-bold flex items-center gap-1 mb-1"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> ${phaseName} 腳手架防護中</span>
+                你仍可<b>無限新增</b>任何行程。達今日承載上限後，系統會依當下行程狀態動態調整：<b>學業安全網</b>一律顯示；其餘依分級優先順序（一→五）僅露出 ${limit} 項。
+            `;
+            lucide.createIcons();
+        }
+
+        function updatePrepWarningFormUI() {
+            const btnOn = document.getElementById('prep-warning-form-on');
+            const btnOff = document.getElementById('prep-warning-form-off');
+            const body = document.getElementById('prep-warning-form-body');
+            const section = document.getElementById('prep-warning-section');
+            if (btnOn) {
+                btnOn.className = prepWarningFormEnabled
+                    ? 'px-2 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-semibold ring-2 ring-indigo-300 transition-all'
+                    : 'px-2 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-semibold transition-all';
+            }
+            if (btnOff) {
+                btnOff.className = !prepWarningFormEnabled
+                    ? 'px-2 py-1 bg-white border border-indigo-400 text-indigo-800 rounded-lg text-[9px] font-semibold ring-2 ring-indigo-200 transition-all'
+                    : 'px-2 py-1 bg-white border border-indigo-200 text-indigo-700 rounded-lg text-[9px] font-semibold transition-all';
+            }
+            if (body) body.classList.toggle('hidden', !prepWarningFormEnabled);
+            if (section) section.classList.toggle('opacity-60', !prepWarningFormEnabled);
+            updatePrepDeadlineTimeUI();
+        }
+
+        function setPrepWarningFormEnabled(enabled) {
+            if (prepWarningFormEnabled === enabled) return;
+            prepWarningFormEnabled = enabled;
+            updatePrepWarningFormUI();
+            showToast(enabled ? '🛡️ 已開啟死線預警設定，可配置準備天數與準備期時間。' : '死線預警設定已關閉，此行程僅保留死線當日顯示。', enabled ? 'protect' : 'info');
+        }
+
+        function updatePrepWarningDisplayUI() {
+            const banner = document.getElementById('prep-warning-display-banner');
+            const btnOn = document.getElementById('console-prep-warning-on');
+            const btnOff = document.getElementById('console-prep-warning-off');
+            if (banner) banner.classList.toggle('hidden', prepWarningDisplayEnabled);
+            if (btnOn) {
+                btnOn.className = prepWarningDisplayEnabled
+                    ? 'py-1.5 bg-indigo-500 ring-2 ring-indigo-300 rounded-lg text-[8px] font-semibold transition-all'
+                    : 'py-1.5 bg-indigo-700 hover:bg-indigo-600 rounded-lg text-[8px] font-semibold transition-all';
+            }
+            if (btnOff) {
+                btnOff.className = !prepWarningDisplayEnabled
+                    ? 'py-1.5 bg-slate-500 ring-2 ring-slate-300 rounded-lg text-[8px] font-semibold transition-all'
+                    : 'py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-[8px] font-semibold transition-all';
+            }
+            lucide.createIcons();
+        }
+
+        function setPrepWarningDisplay(enabled) {
+            if (prepWarningDisplayEnabled === enabled) return;
+            prepWarningDisplayEnabled = enabled;
+            updatePrepWarningDisplayUI();
+            if (enabled) {
+                showToast('🛡️ 死線預警顯示已開啟，準備期內會提早露出安全網行程。', 'protect');
+            } else {
+                showToast('死線預警顯示已關閉，準備期內不再提早顯示（死線當日仍正常）。', 'info');
+            }
+            syncAllViews();
+        }
+
+        function updatePrepDeadlineTimeUI() {
+            const prepDays = parseInt(document.getElementById('event-prep-days').value, 10) || 0;
+            const showPrepSplit = prepWarningFormEnabled && prepDays > 0;
+            document.getElementById('deadline-time-hint').classList.toggle('hidden', !showPrepSplit);
+            document.getElementById('prep-time-config').classList.toggle('hidden', !showPrepSplit);
+            document.getElementById('main-time-label').innerText = showPrepSplit ? '死線當日的時間安排' : '時間需要多精準？';
+        }
+
+        function togglePrepTimeMode(mode) {
+            prepTimeMode = mode;
+            const btnSpecific = document.getElementById('prep-time-mode-specific');
+            const btnFuzzy = document.getElementById('prep-time-mode-fuzzy');
+            const configSpecific = document.getElementById('prep-time-config-specific');
+            const configFuzzy = document.getElementById('prep-time-config-fuzzy');
+
+            if (mode === 'specific') {
+                btnSpecific.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white text-indigo-950 shadow-sm transition-all";
+                btnFuzzy.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg text-slate-500 transition-all";
+                configSpecific.classList.remove('hidden');
+                configFuzzy.classList.add('hidden');
+            } else {
+                btnFuzzy.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white text-indigo-950 shadow-sm transition-all";
+                btnSpecific.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg text-slate-500 transition-all";
+                configFuzzy.classList.remove('hidden');
+                configSpecific.classList.add('hidden');
+            }
+        }
+
+        function durationFromClockRange(start, end) {
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            return Math.max(parseFloat(((eh * 60 + em - sh * 60 - sm) / 60).toFixed(1)), 0.5);
+        }
+
+        function readDeadlineDateFromForm() {
+            const startTimeInput = document.getElementById('event-start-time').value;
+            if (startTimeInput) return startTimeInput.split('T')[0];
+            return currentSelectedDate;
+        }
+
+        function readDeadlineTimeFromForm() {
+            if (activeTimeMode === 'specific') {
+                const startTimeInput = document.getElementById('event-start-time').value;
+                const endTimeInput = document.getElementById('event-end-time').value;
+                const start = startTimeInput.split('T')[1];
+                const end = endTimeInput.split('T')[1];
+                return { timeType: 'specific', start, end, durationHours: durationFromClockRange(start, end) };
+            }
+            const fuzzy = document.querySelector('input[name="fuzzy-time"]:checked').value;
+            const durationHours = parseFloat(document.getElementById('fuzzy-duration-hours').value);
+            return { timeType: 'fuzzy', fuzzy, durationHours };
+        }
+
+        function readPrepTimeFromForm() {
+            if (prepTimeMode === 'specific') {
+                const start = document.getElementById('prep-start-time').value;
+                const end = document.getElementById('prep-end-time').value;
+                return { timeType: 'specific', start, end, durationHours: durationFromClockRange(start, end) };
+            }
+            const fuzzy = document.querySelector('input[name="prep-fuzzy-time"]:checked').value;
+            const durationHours = parseFloat(document.getElementById('prep-fuzzy-duration-hours').value);
+            return { timeType: 'fuzzy', fuzzy, durationHours };
+        }
+
+        function applyPrepTimeToEvent(event, prepTime) {
+            event.prepTimeType = prepTime.timeType;
+            event.prepDurationHours = prepTime.durationHours;
+            if (prepTime.timeType === 'specific') {
+                event.prepStart = prepTime.start;
+                event.prepEnd = prepTime.end;
+            } else {
+                event.prepFuzzy = prepTime.fuzzy;
+            }
+        }
+
+        function applyDeadlineTimeToEvent(event, deadlineTime) {
+            event.timeType = deadlineTime.timeType;
+            event.durationHours = deadlineTime.durationHours;
+            if (deadlineTime.timeType === 'specific') {
+                event.start = deadlineTime.start;
+                event.end = deadlineTime.end;
+            } else {
+                event.fuzzy = deadlineTime.fuzzy;
+            }
+        }
+
+        function openAddEventScreen() {
+            document.getElementById('screen-add-event').classList.remove('hidden');
+            document.getElementById('event-title').value = '';
+            document.getElementById('event-location').value = '';
+            document.getElementById('event-travel-time').value = 'none';
+            document.getElementById('event-repeat').value = 'never';
+            document.getElementById('custom-repeat-container').classList.add('hidden');
+            document.getElementById('event-prep-days').value = '0';
+            syncDatetimeInputs(currentSelectedDate);
+            toggleTimeMode('specific');
+            togglePrepTimeMode('fuzzy');
+            updatePrepWarningFormUI();
+            updateAddEventScaffoldUI();
+            if (isScaffoldPhase()) {
+                showToast(`腳手架模式：可無限新增；達承載上限後依當下行程動態露出 ${getScaffoldMicroTaskLimit()} 項。`, 'info');
+            }
+            lucide.createIcons();
+        }
+
+        function handleRepeatChange(val) {
+            document.getElementById('custom-repeat-container').classList.toggle('hidden', val !== 'custom');
+        }
+
+        function handleCustomFreqChange(val) {
+            document.getElementById('custom-days-input-group').classList.toggle('hidden', val !== 'days');
+        }
+
+        function closeAddEventScreen() {
+            document.getElementById('screen-add-event').classList.add('hidden');
+        }
+
+        function toggleTimeMode(mode) {
+            activeTimeMode = mode;
+            const btnSpecific = document.getElementById('time-mode-specific');
+            const btnFuzzy = document.getElementById('time-mode-fuzzy');
+            const configSpecific = document.getElementById('time-config-specific');
+            const configFuzzy = document.getElementById('time-config-fuzzy');
+
+            if (mode === 'specific') {
+                btnSpecific.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white text-indigo-950 shadow-sm transition-all";
+                btnFuzzy.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg text-slate-500 transition-all";
+                configSpecific.classList.remove('hidden');
+                configFuzzy.classList.add('hidden');
+            } else {
+                btnFuzzy.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-white text-indigo-950 shadow-sm transition-all";
+                btnSpecific.className = "text-[10px] font-semibold px-2.5 py-1 rounded-lg text-slate-500 transition-all";
+                configFuzzy.classList.remove('hidden');
+                configSpecific.classList.add('hidden');
+            }
+        }
+
+        function saveNewEvent() {
+            const title = document.getElementById('event-title').value.trim();
+            const location = document.getElementById('event-location').value.trim();
+            const travelTime = document.getElementById('event-travel-time').value;
+
+            if (!title) {
+                alert("請輸入行程標題！");
+                return;
+            }
+
+            const aiResult = analyzeAndClassifyTaskWithAI(title, location || '');
+            const repeat = document.getElementById('event-repeat').value;
+
+            let duration = 1.0;
+            if (activeTimeMode === 'specific') {
+                const start = new Date(document.getElementById('event-start-time').value);
+                const end = new Date(document.getElementById('event-end-time').value);
+                const diffMs = end.getTime() - start.getTime();
+                duration = Math.max(parseFloat((diffMs / (1000 * 60 * 60)).toFixed(1)), 0.5);
+            } else {
+                duration = parseFloat(document.getElementById('fuzzy-duration-hours').value);
+            }
+
+            const newEvent = {
+                id: Date.now(),
+                title: title,
+                location: location || "個人宿舍",
+                travelTime: travelTime,
+                timeType: activeTimeMode,
+                repeat,
+                weight: aiResult.weight,
+                aiCategory: aiResult.aiCategory,
+                isProtected: aiResult.isProtected,
+                durationHours: duration,
+                completed: false
+            };
+
+            const prepDaysVal = parseInt(document.getElementById('event-prep-days').value, 10) || 0;
+            if (prepWarningFormEnabled && prepDaysVal > 0) {
+                newEvent.isProtected = true;
+                newEvent.weight = '1';
+                newEvent.aiCategory = 'high';
+                newEvent.prepDays = prepDaysVal;
+                const deadlineDateStr = readDeadlineDateFromForm();
+                newEvent.deadlineDateStr = deadlineDateStr;
+                newEvent.date = deadlineDateStr;
+                const deadlineTime = readDeadlineTimeFromForm();
+                const prepTime = readPrepTimeFromForm();
+                applyDeadlineTimeToEvent(newEvent, deadlineTime);
+                applyPrepTimeToEvent(newEvent, prepTime);
+                duration = isPrepPeriodView(newEvent, currentSelectedDate) ? prepTime.durationHours : deadlineTime.durationHours;
+            } else if (activeTimeMode === 'specific') {
+                const startTimeInput = document.getElementById('event-start-time').value;
+                newEvent.date = startTimeInput.split('T')[0];
+                newEvent.start = startTimeInput.split('T')[1];
+                newEvent.end = document.getElementById('event-end-time').value.split('T')[1];
+            } else {
+                newEvent.date = currentSelectedDate;
+                newEvent.fuzzy = document.querySelector('input[name="fuzzy-time"]:checked').value;
+            }
+
+            if (!checkHoursBudgetBeforeAdd(duration, newEvent)) return;
+
+            eventsDatabase.push(newEvent);
+            closeAddEventScreen();
+            if (hasPrepWarningEnabled(newEvent)) {
+                const diff = getDaysUntilDeadline(newEvent, currentSelectedDate);
+                const prepStart = getPrepPeriodStartDateStr(newEvent);
+                const prepEnd = addDaysToDateStr(newEvent.deadlineDateStr, -1);
+                if (isPrepPeriodView(newEvent, currentSelectedDate)) {
+                    showToast(`🛡️ 死線預警已啟動！今日顯示「準備${newEvent.title}」（離死線 ${diff} 天）`, 'protect');
+                } else if (diff > newEvent.prepDays) {
+                    showToast(`🛡️ 死線預警已儲存。準備期 ${prepStart}～${prepEnd} 顯示「準備…」，死線當日 ${newEvent.deadlineDateStr}。`, 'protect');
+                } else {
+                    showToast(`🛡️ 死線預警已儲存，將於死線當日（${newEvent.deadlineDateStr}）顯示。`, 'protect');
+                }
+            } else {
+                notifyAfterEventAdd(newEvent, aiResult);
+            }
+
+            searchQuery = '';
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = '';
+            syncAllViews();
+        }
+
+        function renderCalendarGrid() {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            for (let i = 1; i <= 30; i++) {
+                const dateStr = `2026-06-${i < 10 ? '0' + i : i}`;
+                const dayBtn = document.createElement('div');
+                dayBtn.className = "py-1.5 cursor-pointer text-xs rounded-xl font-medium transition-all relative flex flex-col items-center";
+
+                if (dateStr === currentSelectedDate) {
+                    dayBtn.className += " bg-indigo-950 text-white shadow-sm font-semibold scale-110";
+                } else {
+                    dayBtn.className += " text-slate-700 hover:bg-slate-100";
+                }
+
+                dayBtn.innerText = i;
+                dayBtn.onclick = () => selectDate(dateStr);
+
+                const dayHasEvents = eventsDatabase.some(e => e.date === dateStr);
+                if (dayHasEvents) {
+                    const dot = document.createElement('span');
+                    dot.className = "w-1 h-1 rounded-full bg-indigo-400 absolute bottom-1";
+                    dayBtn.appendChild(dot);
+                }
+                grid.appendChild(dayBtn);
+            }
+        }
+
+        function selectDate(dateStr) {
+            currentSelectedDate = dateStr;
+            searchQuery = '';
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = '';
+            syncAllViews();
+        }
+
+        function buildEventCard(e, viewDate = currentSelectedDate) {
+            const visibleIds = new Set(getTimelineEvents(viewDate).map(ev => ev.id));
+            if (!visibleIds.has(e.id)) return null;
+
+            const card = document.createElement('div');
+            card.className = 'bg-white border border-slate-100 p-3.5 rounded-2xl flex justify-between items-start transition-all shadow-sm' + getEventVisualClass(e);
+
+            const timeTag = getEventTimeLabel(e, viewDate).display;
+            const viewDuration = getEventDurationForView(e, viewDate);
+            let microTag = '';
+            if (shouldApplyScaffoldVisibilityFilter(viewDate)) {
+                const visible = getMicroTaskLimitVisibleEvents(viewDate);
+                if (visible.some(ev => ev.id === e.id)) {
+                    microTag = '<span class="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">動態可見</span>';
+                }
+            }
+
+            const travelTag = e.travelTime !== 'none'
+                ? `<span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><i data-lucide="footprints" class="w-2.5 h-2.5"></i>路程 ${e.travelTime}</span>`
+                : '';
+
+            const weightBadges = {
+                '1': '<span class="text-[9px] font-bold bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">分級一</span>',
+                '2': '<span class="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full">分級二</span>',
+                '3': '<span class="text-[9px] font-bold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">分級三</span>',
+                '4': '<span class="text-[9px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">分級四</span>',
+                '5': '<span class="text-[9px] font-bold bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded-full">分級五</span>',
+            };
+
+            ensureEventMeta(e);
+            let bubbleTag = '';
+            if (e.aiCategory && AI_CALENDAR_TAGS[e.aiCategory]) {
+                const t = AI_CALENDAR_TAGS[e.aiCategory];
+                bubbleTag = `<span class="text-[9px] ${t.class} px-1.5 py-0.5 rounded-md font-semibold">${t.name}</span>`;
+            }
+
+            const protectTag = e.isProtected
+                ? '<span class="text-[9px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><i data-lucide="shield-check" class="w-2.5 h-2.5"></i>安全網</span>'
+                : '';
+
+            const deleteBtnHtml = isScaffoldEditLocked()
+                ? ''
+                : `<button type="button" onclick="deleteEvent(${e.id})" class="text-slate-300 hover:text-rose-500 transition-colors p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>`;
+
+            card.innerHTML = `
+                <div class="flex-1">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        ${weightBadges[e.weight] || ''}
+                        <span class="text-[10px] text-slate-400 font-medium">${timeTag} (${viewDuration}小時)</span>
+                        ${travelTag}
+                        ${bubbleTag}
+                        ${protectTag}
+                        ${microTag}
+                    </div>
+                    <h4 class="text-xs font-semibold text-slate-800 mt-1.5">${getEventDisplayTitle(e, viewDate)}</h4>
+                    <p class="text-[9px] text-slate-400 mt-1 flex items-center gap-0.5"><i data-lucide="map-pin" class="w-2.5 h-2.5"></i>${e.location}</p>
+                </div>
+                ${deleteBtnHtml}
+            `;
+            return card;
+        }
+
+        function renderEventsList(dateStr) {
+            const container = document.getElementById('today-events-container');
+            container.innerHTML = '';
+
+            let dayEvents = getTimelineEvents(dateStr);
+            if (searchQuery.trim()) {
+                dayEvents = dayEvents.filter(e => e.title.includes(searchQuery.trim()));
+            }
+
+            if (dayEvents.length === 0) {
+                container.innerHTML = searchQuery.trim()
+                    ? '<p class="text-xs text-slate-400 italic text-center py-6">找不到相符的行程...</p>'
+                    : '<p class="text-xs text-slate-400 italic text-center py-6">今天沒有安排任何流動行程...</p>';
+                return;
+            }
+
+            dayEvents.forEach(e => {
+                const card = buildEventCard(e, dateStr);
+                if (card) container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function deleteEvent(id) {
+            if (isScaffoldEditLocked()) {
+                showToast('腳手架防護中，行程刪除功能已鎖定。', 'warning');
+                return;
+            }
+            eventsDatabase = eventsDatabase.filter(e => e.id !== id);
+            syncAllViews();
+        }
+
+        function toggleSearch() {
+            const bar = document.getElementById('search-bar');
+            bar.classList.toggle('hidden');
+            if (bar.classList.contains('hidden')) {
+                searchQuery = '';
+                document.getElementById('search-input').value = '';
+                renderEventsList(currentSelectedDate);
+            }
+        }
+
+        function filterEvents(query) {
+            searchQuery = query;
+            renderEventsList(currentSelectedDate);
+        }
+
+        function cancelZenBreathing() {
+            zenTimerIds.forEach(id => clearTimeout(id));
+            zenTimerIds = [];
+            document.getElementById('screen-zen').classList.add('hidden');
+            document.getElementById('zen-countdown').innerText = '吸氣...';
+            document.getElementById('zen-breaths-left').innerText = '第 1 / 3 次呼吸';
+        }
+
+        function scheduleZen(ms, fn) {
+            zenTimerIds.push(setTimeout(fn, ms));
+        }
+
+        function triggerZenZest() {
+            cancelZenBreathing();
+            const zenOverlay = document.getElementById('screen-zen');
+            zenOverlay.classList.remove('hidden');
+
+            const countdownText = document.getElementById('zen-countdown');
+            const breathsLeftText = document.getElementById('zen-breaths-left');
+            let breathCount = 1;
+
+            function runBreathCycle() {
+                if (breathCount > 3) {
+                    scheduleZen(1000, () => zenOverlay.classList.add('hidden'));
+                    return;
+                }
+                breathsLeftText.innerText = `第 ${breathCount} / 3 次呼吸`;
+                countdownText.innerText = '吸氣...';
+                scheduleZen(2000, () => {
+                    countdownText.innerText = '呼氣...';
+                    scheduleZen(2000, () => {
+                        breathCount++;
+                        runBreathCycle();
+                    });
+                });
+            }
+            runBreathCycle();
+        }
+
+        const adjustEnergySlider = document.getElementById('adjust-energy-slider');
+        if (adjustEnergySlider) {
+            adjustEnergySlider.addEventListener('input', (e) => {
+                vitalityDraft.energy = parseInt(e.target.value, 10);
+                const adjustVal = document.getElementById('adjust-energy-val');
+                if (adjustVal) {
+                    adjustVal.innerText = `${vitalityDraft.energy}%`;
+                    adjustVal.className = 'text-sm font-semibold ' + (vitalityDraft.energy < 35 ? 'text-rose-500' : 'text-indigo-600');
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeDatabaseForPhase();
+            updatePhaseBadges();
+            applyScaffoldUI();
+            updateTimeOfDayUI();
+            updateAllWeatherUI();
+            updateAllEnergyUI();
+            updateUnreportedThrottlingUI();
+            updatePrepWarningDisplayUI();
+            updatePrepWarningFormUI();
+            syncAllViews();
+            lucide.createIcons();
+        });
+    </script>
+</body>
+</html>
