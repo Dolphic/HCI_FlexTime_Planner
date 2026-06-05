@@ -27,6 +27,27 @@
             50% { transform: scale(1.3); opacity: 0.95; }
         }
       .breathe-circle { animation: breathe 4s ease-in-out infinite; }
+        #demo-console[data-collapsed="true"] #demo-console-panel { display: none; }
+        #demo-console[data-collapsed="false"] #demo-console-fab { display: none; }
+        #demo-console-fab {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 9999px;
+            background: rgba(2, 6, 23, 0.92);
+            border: 1px solid rgb(30, 41, 59);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(12px);
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        #demo-console-fab:active { transform: scale(0.95); }
+        @media (max-width: 768px) {
+            #demo-console[data-collapsed="true"] #demo-console-fab { display: flex; }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-tr from-[#f0f4ff] via-[#f5f3ff] to-[#fff1f2] min-h-screen flex flex-col items-center justify-center p-4 overflow-x-hidden select-none relative">
@@ -590,10 +611,16 @@
 
     </div>
 
-    <div class="fixed bottom-4 right-4 bg-slate-950/90 text-white p-4 rounded-[28px] shadow-2xl z-50 flex flex-col gap-2.5 max-w-[280px] border border-slate-800 backdrop-blur-md">
-        <p class="text-[11px] font-bold text-slate-300 flex items-center gap-1">
-            <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i> 💡 HCI 發表 Demo 專用控制台 (時空跳躍)
-        </p>
+    <div id="demo-console" class="fixed bottom-4 right-4 z-50 max-w-[280px]" data-collapsed="false">
+        <button type="button" id="demo-console-fab" onclick="toggleDemoConsole()" aria-label="開啟 Demo 控制台" title="Demo 控制台">
+            <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+        </button>
+        <div id="demo-console-panel" class="bg-slate-950/90 text-white p-4 rounded-[28px] shadow-2xl flex flex-col gap-2.5 border border-slate-800 backdrop-blur-md">
+        <button type="button" onclick="toggleDemoConsole()" class="text-[11px] font-bold text-slate-300 flex items-center gap-1 w-full text-left hover:text-white transition-colors group" title="點一下收合">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
+            <span class="flex-1">💡 HCI 發表 Demo 專用控制台 (時空跳躍)</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 md:hidden shrink-0"></i>
+        </button>
         <div class="border-b border-slate-800 pb-2 flex flex-col gap-1.5">
             <p class="text-[9px] text-slate-400">模擬開啟 App 時段：</p>
             <p class="text-[8px] text-slate-500">切換現實時間問候與進入流程，並回到歡迎畫面。</p>
@@ -651,10 +678,42 @@
         <button type="button" onclick="triggerZenZest()" class="w-full py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] font-bold transition-all flex items-center justify-center gap-1">
             <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> 模擬學術焦慮 (深呼吸)
         </button>
+        </div>
     </div>
 
     <script>
         lucide.createIcons();
+
+        let demoConsoleCollapsed = false;
+
+        function isMobileViewport() {
+            return window.matchMedia('(max-width: 768px)').matches;
+        }
+
+        function updateDemoConsoleUI() {
+            const consoleEl = document.getElementById('demo-console');
+            const fab = document.getElementById('demo-console-fab');
+            if (!consoleEl) return;
+            const collapsed = isMobileViewport() ? demoConsoleCollapsed : false;
+            consoleEl.dataset.collapsed = collapsed ? 'true' : 'false';
+            if (fab) fab.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            lucide.createIcons();
+        }
+
+        function toggleDemoConsole() {
+            if (!isMobileViewport()) return;
+            demoConsoleCollapsed = !demoConsoleCollapsed;
+            updateDemoConsoleUI();
+        }
+
+        function initDemoConsoleForViewport() {
+            if (isMobileViewport()) {
+                demoConsoleCollapsed = true;
+            }
+            updateDemoConsoleUI();
+        }
+
+        window.addEventListener('resize', updateDemoConsoleUI);
 
         const AI_BADGE_DATA = {
             high: { label: '深度專注 🧠', class: 'bg-indigo-50 text-indigo-700 border border-indigo-100' },
@@ -2594,6 +2653,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            initDemoConsoleForViewport();
             initializeDatabaseForPhase();
             updatePhaseBadges();
             applyScaffoldUI();
