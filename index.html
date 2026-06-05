@@ -293,7 +293,7 @@
 
                 <div class="flex-1 px-6 py-4 flex flex-col gap-4 overflow-y-auto">
                     <div id="add-event-scaffold-notice" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-3 text-[10px] text-amber-900 leading-relaxed">
-                        <span class="font-bold flex items-center gap-1 mb-1"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 🌱 Day 1 腳手架防護中</span>
+                        <span class="font-bold flex items-center gap-1 mb-1"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 🌱 Day 1 行程保護開啟中</span>
                         你仍可<b>無限新增</b>任何行程。達今日承載上限後，系統會依當下行程狀態動態調整顯示優先順序。
                     </div>
                     <div class="flex flex-col gap-3">
@@ -748,9 +748,9 @@
         ];
 
         const SCAFFOLD_PHASE_CONFIG = {
-            d1: { microLimit: 1, maxHours: 3.0, throttleHours: 1.5, badgeClass: 'bg-amber-100 text-amber-800', icon: 'shield-check', label: '腳手架🌱D1' },
-            d3: { microLimit: 2, maxHours: 4.0, throttleHours: 2.0, badgeClass: 'bg-amber-50 text-amber-700', icon: 'shield-check', label: '腳手架🌿D3' },
-            d5: { microLimit: 3, maxHours: 6.0, throttleHours: 3.0, badgeClass: 'bg-lime-50 text-lime-800', icon: 'shield-check', label: '腳手架🌳D5' },
+            d1: { microLimit: 1, maxHours: 3.0, throttleHours: 1.5, badgeClass: 'bg-amber-100 text-amber-800', icon: 'shield-check', label: '行程保護開啟中🌱D1' },
+            d3: { microLimit: 2, maxHours: 4.0, throttleHours: 2.0, badgeClass: 'bg-amber-50 text-amber-700', icon: 'shield-check', label: '行程保護開啟中🌿D3' },
+            d5: { microLimit: 3, maxHours: 6.0, throttleHours: 3.0, badgeClass: 'bg-lime-50 text-lime-800', icon: 'shield-check', label: '行程保護開啟中🌳D5' },
         };
 
         const DATABASE_D7 = [
@@ -878,8 +878,8 @@
                     : `剪枝待命 · ${label} · 體力 ${currentEnergyLevel}%`)
                 : isScaffoldPhase()
                     ? (isHoursBudgetExceeded()
-                        ? `腳手架剪枝已觸發 · ${label} · 體力 ${currentEnergyLevel}%`
-                        : `腳手架進行中 · ${label} · 體力 ${currentEnergyLevel}%`)
+                        ? `行程保護開啟中剪枝已觸發 · ${label} · 體力 ${currentEnergyLevel}%`
+                        : `行程保護開啟中 · ${label} · 體力 ${currentEnergyLevel}%`)
                     : `${label} · 體力 ${currentEnergyLevel}% · ${meta.mood}`;
             document.querySelectorAll('.vitality-overview-icon').forEach(el => {
                 el.innerHTML = `<i data-lucide="${isPruningActive ? 'scissors' : meta.icon}" class="w-5 h-5 ${isPruningActive ? 'text-rose-500' : meta.color}"></i>`;
@@ -1458,13 +1458,13 @@
 
         function notifyAfterEventAdd(event, aiResult) {
             if (aiResult.isProtected) {
-                showToast('🛡️ 學業安全網行程已新增，腳手架模式下仍會完整顯示。', 'protect');
+                showToast('🛡️ 學業安全網行程已新增，行程保護開啟中模式下仍會完整顯示。', 'protect');
                 return;
             }
             if (shouldApplyMicroTaskLimit()) {
                 const limit = getScaffoldMicroTaskLimit();
                 if (!isHoursBudgetExceeded()) {
-                    showToast(`新增成功！${formatAiFeedback(aiResult)}（腳手架進行中，達承載上限前皆可見）`, 'success');
+                    showToast(`新增成功！${formatAiFeedback(aiResult)}（行程保護開啟中，達承載上限前皆可見）`, 'success');
                 } else if (isEventVisibleToday(event)) {
                     showToast(`新增成功！${formatAiFeedback(aiResult)}（剪枝已觸發，今日可見行程上限 ${limit} 項）`, 'success');
                 } else {
@@ -1605,7 +1605,7 @@
                     d3: '已跳躍至 Day 3🌿。可無限新增；達承載上限後動態露出 2 項行程（優先一→五）。',
                     d5: '已跳躍至 Day 5🌳。可無限新增；達承載上限後動態露出 3 項行程（優先一→五）。',
                 };
-                showToast(phaseToast[currentPhase] || `已跳躍至腳手架階段，達上限後動態露出 ${cfg.microLimit} 項行程。`, 'info');
+                showToast(phaseToast[currentPhase] || `已跳躍至行程保護開啟中階段，達上限後動態露出 ${cfg.microLimit} 項行程。`, 'info');
             } else {
                 document.getElementById('achievement-modal').classList.remove('hidden');
                 showToast('已跳躍至 Day 7🏆。自律解鎖：所有行程完整顯示與手動配置。', 'success');
@@ -1849,7 +1849,7 @@
         function clearTodaySchedule() {
             if (isScaffoldEditLocked()) {
                 const limit = getScaffoldMicroTaskLimit();
-                showToast(`腳手架防護中：今日僅開放 ${limit} 項行程，無法清空。讓我們踏出輕鬆的一步吧！`, 'warning');
+                showToast(`行程保護開啟中：今日僅開放 ${limit} 項行程，無法清空。讓我們踏出輕鬆的一步吧！`, 'warning');
                 return;
             }
             if (confirm('是否要暫緩清空今天的所有行程，給自己徹底放空的一天？')) {
@@ -1932,13 +1932,13 @@
 
             if (shouldApplyScaffoldVisibilityFilter()) {
                 progressBar.className = "bg-rose-500 h-full transition-all duration-300";
-                document.getElementById('budget-desc').innerHTML = `✂️ <b>腳手架剪枝已觸發：</b>依今日上限僅露出 ${getScaffoldMicroTaskLimit()} 項行程（優先一→五）；仍可繼續新增。`;
+                document.getElementById('budget-desc').innerHTML = `✂️ <b>行程保護開啟中剪枝已觸發：</b>依今日上限僅露出 ${getScaffoldMicroTaskLimit()} 項行程（優先一→五）；仍可繼續新增。`;
             } else if (shouldApplyD7PruningVisibilityFilter()) {
                 progressBar.className = "bg-rose-500 h-full transition-all duration-300";
                 document.getElementById('budget-desc').innerHTML = '✂️ <b>剪枝已觸發：</b>分級五已隱藏；分級二～四以淡化顯示；仍可繼續新增。';
             } else if (isScaffoldPhase()) {
                 progressBar.className = progressPercent >= 75 ? "bg-amber-500 h-full transition-all duration-300" : "bg-indigo-600 h-full transition-all duration-300";
-                document.getElementById('budget-desc').innerHTML = '🌱 <b>腳手架進行中：</b>達承載上限前可自由新增；超出後將依優先分級動態顯示。';
+                document.getElementById('budget-desc').innerHTML = '🌱 <b>行程保護開啟中：</b>達承載上限前可自由新增；超出後將依優先分級動態顯示。';
             } else if (isPruningActive) {
                 progressBar.className = progressPercent >= 75 ? "bg-amber-500 h-full transition-all duration-300" : "bg-indigo-600 h-full transition-all duration-300";
                 document.getElementById('budget-desc').innerHTML = '🌿 <b>動態剪枝待命：</b>達承載上限前可自由新增；超出後將自動隱藏低優先行程。';
@@ -1974,7 +1974,7 @@
             if (combinedEvents.length === 0) {
                 const limit = getScaffoldMicroTaskLimit();
                 const emptyMsg = shouldApplyScaffoldVisibilityFilter()
-                    ? `腳手架剪枝已觸發：安全網行程一律顯示；其餘分級一～五依今日上限僅露出 ${limit} 項（優先一→五）。`
+                    ? `行程保護開啟中剪枝已觸發：安全網行程一律顯示；其餘分級一～五依今日上限僅露出 ${limit} 項（優先一→五）。`
                     : shouldApplyD7PruningVisibilityFilter()
                         ? '剪枝已觸發：分級五已隱藏；分級二～四以淡化顯示。'
                         : '今天沒有任何行程規劃...';
@@ -2170,7 +2170,7 @@
             const phaseName = getScaffoldConfig().label;
             notice.classList.remove('hidden');
             notice.innerHTML = `
-                <span class="font-bold flex items-center gap-1 mb-1"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> ${phaseName} 腳手架防護中</span>
+                <span class="font-bold flex items-center gap-1 mb-1"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> ${phaseName}</span>
                 你仍可<b>無限新增</b>任何行程。達今日承載上限後，系統會依當下行程狀態動態調整：<b>學業安全網</b>一律顯示；其餘依分級優先順序（一→五）僅露出 ${limit} 項。
             `;
             lucide.createIcons();
@@ -2333,7 +2333,7 @@
             updatePrepWarningFormUI();
             updateAddEventScaffoldUI();
             if (isScaffoldPhase()) {
-                showToast(`腳手架模式：可無限新增；達承載上限後依當下行程動態露出 ${getScaffoldMicroTaskLimit()} 項。`, 'info');
+                showToast(`行程保護開啟中模式：可無限新增；達承載上限後依當下行程動態露出 ${getScaffoldMicroTaskLimit()} 項。`, 'info');
             }
             lucide.createIcons();
         }
@@ -2579,7 +2579,7 @@
 
         function deleteEvent(id) {
             if (isScaffoldEditLocked()) {
-                showToast('腳手架防護中，行程刪除功能已鎖定。', 'warning');
+                showToast('行程保護開啟中，行程刪除功能已鎖定。', 'warning');
                 return;
             }
             eventsDatabase = eventsDatabase.filter(e => e.id !== id);
